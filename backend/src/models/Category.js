@@ -1,0 +1,12 @@
+const mongoose = require('mongoose');
+
+const categorySchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  description: { type: String, default: '' },
+  color: { type: String, default: '#2563eb' }
+}, {
+  timestamps: true
+});
+
+module.exports = mongoose.models.Category || mongoose.model('Category', categorySchema);

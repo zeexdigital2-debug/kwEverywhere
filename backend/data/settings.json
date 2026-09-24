@@ -1,0 +1,21 @@
+{
+  "general": {
+    "siteName": "Keywords Everywhere Pro",
+    "tagline": "Instant Search Volume, CPC & SEO Intelligence",
+    "contactEmail": "support@kweverywhere.com",
+    "defaultCredits": 250,
+    "allowRegistration": true
+  },
+  "seo": {
+    "metaTitle": "Keywords Everywhere — Instant SEO & Keyword Intelligence",
+    "metaDescription": "Discover high-intent keywords, search volume, CPC, and competition with real-time analytics.",
+    "keywords": "keyword research, seo tool, cpc checker, search volume",
+    "ogImageUrl": "",
+    "robotsTxt": "User-agent: *\nAllow: /"
+  },
+  "social": {
+    "twitter": "https://twitter.com",
+    "linkedin": "https://linkedin.com",
+    "github": "https://github.com"
+  }
+}

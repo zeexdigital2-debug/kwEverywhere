@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KWS Pulse Extension</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo-box">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>KWS Pulse</span>
+      </div>
+      <span class="badge">MV3</span>
+    </div>
+
+    <!-- Connection Status -->
+    <div id="status-card" class="status-card status-disconnected">
+      <div class="status-indicator"></div>
+      <span id="status-text">Disconnected (No API Token)</span>
+    </div>
+
+    <!-- Form -->
+    <div class="form-group">
+      <label for="api-token">API Auth Token</label>
+      <input type="text" id="api-token" placeholder="Paste kws_ext_... API Token">
+    </div>
+
+    <div class="form-group">
+      <label for="api-host">Backend REST API Endpoint</label>
+      <input type="text" id="api-host" value="http://localhost:4001/api">
+    </div>
+
+    <button id="save-btn" class="btn-primary">Connect & Save Token</button>
+
+    <!-- Quick Search -->
+    <div class="divider"></div>
+    <div class="form-group">
+      <label for="quick-kw">Quick Keyword Lookup</label>
+      <div class="input-with-btn">
+        <input type="text" id="quick-kw" placeholder="e.g. seo software">
+        <button id="search-btn" class="btn-secondary">Search</button>
+      </div>
+    </div>
+
+    <div id="result-box" class="result-box hidden"></div>
+
+    <div class="footer">
+      <a href="http://localhost:5173" target="_blank" rel="noreferrer">Open KWS Web Dashboard →</a>
+    </div>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
