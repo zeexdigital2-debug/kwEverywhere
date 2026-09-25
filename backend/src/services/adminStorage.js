@@ -9,9 +9,24 @@ const User = require('../models/User');
 const AdminSetting = require('../models/AdminSetting');
 const KeywordHistory = require('../models/KeywordHistory');
 
-const dataDir = path.join(__dirname, '../../data');
+const localDataDir = path.join(__dirname, '../../data');
+const dataDir = process.env.VERCEL ? '/tmp/data' : localDataDir;
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
+}
+
+if (process.env.VERCEL && fs.existsSync(localDataDir)) {
+  try {
+    const files = fs.readdirSync(localDataDir);
+    for (const file of files) {
+      const dest = path.join(dataDir, file);
+      if (!fs.existsSync(dest)) {
+        fs.copyFileSync(path.join(localDataDir, file), dest);
+      }
+    }
+  } catch (err) {
+    console.warn('[Vercel storage]:', err.message);
+  }
 }
 
 function isDbConnected() {

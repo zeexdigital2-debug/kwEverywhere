@@ -81,6 +81,10 @@ app.use((req, res) => {
 
 const PORT = env.PORT;
 
-app.listen(PORT, () => {
-  console.log(`🚀 SEO SaaS API Server running in ${env.NODE_ENV} mode on port ${PORT}`);
-});
+if (require.main === module && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 SEO SaaS API Server running in ${env.NODE_ENV} mode on port ${PORT}`);
+  });
+}
+
+module.exports = app;
