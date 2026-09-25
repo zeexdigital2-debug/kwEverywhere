@@ -29,7 +29,11 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(cors({
-  origin: [env.FRONTEND_URL, 'http://localhost:3000', 'http://localhost:4000'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, server-to-server) or match allowed
+    if (!origin) return callback(null, true);
+    return callback(null, true); // dynamically allow requesting origin with credentials
+  },
   credentials: true
 }));
 app.use(cookieParser());

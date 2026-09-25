@@ -1,8 +1,13 @@
 import axios from 'axios';
 
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+const baseURL = rawApiUrl
+  ? (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`)
+  : (typeof window !== 'undefined' ? '/api' : 'http://localhost:48920/api');
+
 // Admin API client pointing to backend /api
 const adminApi = axios.create({
-  baseURL: typeof window !== 'undefined' ? '/api' : 'http://localhost:48920/api',
+  baseURL,
   headers: {
     'Content-Type': 'application/json'
   },

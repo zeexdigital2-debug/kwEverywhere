@@ -1,7 +1,10 @@
 import axios from 'axios';
 import { supabase } from './supabase';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? '/api' : 'http://localhost:48920/api');
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+const API_BASE = rawApiUrl
+  ? (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`)
+  : (typeof window !== 'undefined' ? '/api' : 'http://localhost:48920/api');
 
 const api = axios.create({
   baseURL: API_BASE,
