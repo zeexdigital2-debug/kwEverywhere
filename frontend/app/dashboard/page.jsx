@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Search, Target, Globe, BarChart3, ArrowRight, GitCompare } from 'lucide-react';
+import { Search, ArrowRight } from 'lucide-react';
 
 const tools = [
   { 
@@ -10,35 +10,6 @@ const tools = [
     href: '/dashboard/keyword-research',
     color: 'from-blue-400 to-blue-600'
   },
-  { 
-    name: 'Keywords Finder', 
-    desc: 'Extract high-intent keywords from competitor URLs, domains, or seed keywords.', 
-    icon: Target, 
-    href: '/dashboard/keywords-finder',
-    color: 'from-brand-400 to-brand-600'
-  },
-  { 
-    name: 'Competitor Gap', 
-    desc: "Find keywords competitors rank for that you don't — uncover hidden traffic.", 
-    icon: GitCompare, 
-    href: '/dashboard/competitor-gap',
-    color: 'from-pink-400 to-rose-600',
-    badge: 'New'
-  },
-  { 
-    name: 'Local Keywords', 
-    desc: 'Discover geo-targeted keyword opportunities across 22+ countries and languages.', 
-    icon: Globe, 
-    href: '/dashboard/local-keywords',
-    color: 'from-purple-400 to-purple-600'
-  },
-  { 
-    name: 'Domain Metrics', 
-    desc: 'Check OpenPageRank authority scores in bulk for any domain list.', 
-    icon: BarChart3, 
-    href: '/dashboard/domain-metrics',
-    color: 'from-orange-400 to-orange-600'
-  }
 ];
 
 export default function DashboardOverview() {

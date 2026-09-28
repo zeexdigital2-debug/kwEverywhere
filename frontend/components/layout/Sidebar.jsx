@@ -1,17 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Search, Target, Globe, BarChart3, History, LogOut, GitCompare } from 'lucide-react';
+import { LayoutDashboard, Search, LogOut } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Keyword Research', href: '/dashboard/keyword-research', icon: Search },
-  { name: 'Keywords Finder', href: '/dashboard/keywords-finder', icon: Target },
-  { name: 'Competitor Gap', href: '/dashboard/competitor-gap', icon: GitCompare },
-  { name: 'Local Keywords', href: '/dashboard/local-keywords', icon: Globe },
-  { name: 'Domain Metrics', href: '/dashboard/domain-metrics', icon: BarChart3 },
-  { name: 'History', href: '/dashboard/history', icon: History },
 ];
 
 export function Sidebar() {
