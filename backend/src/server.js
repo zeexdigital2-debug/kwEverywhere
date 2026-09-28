@@ -55,7 +55,15 @@ app.use('/api/admin', adminRoutes);
 // Apply general rate limit to all /api routes
 app.use('/api/', generalLimiter);
 
-// Health check
+// Root & health check
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'KW Everywhere API Server running live', timestamp: new Date().toISOString() });
+});
+
+app.get('/api', (req, res) => {
+  res.json({ status: 'ok', message: 'KW Everywhere API Server running live', timestamp: new Date().toISOString() });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
