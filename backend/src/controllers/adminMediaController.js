@@ -4,7 +4,10 @@ const multer = require('multer');
 const Media = require('../models/Media');
 const { isDbConnected, readJson, writeJson } = require('../services/adminStorage');
 
-const uploadDir = path.join(__dirname, '../../uploads');
+const uploadDir = process.env.VERCEL
+  ? '/tmp/uploads'
+  : path.join(__dirname, '../../uploads');
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }

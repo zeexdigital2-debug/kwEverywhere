@@ -41,7 +41,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+const uploadStaticDir = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadStaticDir));
 
 // Public Content & Settings Routes
 app.use('/api/content', contentRoutes);
