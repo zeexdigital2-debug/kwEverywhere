@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Search, Camera, ArrowRight } from 'lucide-react';
+import { Search, Camera, ShieldOff, ArrowRight } from 'lucide-react';
 
 const tools = [
   { 
@@ -17,6 +17,14 @@ const tools = [
     href: '/dashboard/geotag',
     color: 'from-emerald-500 to-teal-600',
     badge: 'New Tool'
+  },
+  { 
+    name: 'Remove Metadata', 
+    desc: 'Audit hidden EXIF tags, GPS location, camera details, and sanitize images 100% client-side.', 
+    icon: ShieldOff, 
+    href: '/dashboard/remove-metadata',
+    color: 'from-amber-500 to-rose-600',
+    badge: 'Privacy Tool'
   },
 ];
 
