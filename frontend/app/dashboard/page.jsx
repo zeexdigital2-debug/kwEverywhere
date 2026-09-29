@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Search, ArrowRight } from 'lucide-react';
+import { Search, Camera, ArrowRight } from 'lucide-react';
 
 const tools = [
   { 
@@ -9,6 +9,14 @@ const tools = [
     icon: Search, 
     href: '/dashboard/keyword-research',
     color: 'from-blue-400 to-blue-600'
+  },
+  { 
+    name: 'Geotag Photos', 
+    desc: 'Embed GPS coordinates, local SEO keywords, and EXIF descriptions into photos client-side.', 
+    icon: Camera, 
+    href: '/dashboard/geotag',
+    color: 'from-emerald-500 to-teal-600',
+    badge: 'New Tool'
   },
 ];
 

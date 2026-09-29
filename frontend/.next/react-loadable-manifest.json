@@ -1,1 +1,10 @@
-{}
+{
+  "app\\dashboard\\geotag\\page.jsx -> @/components/geotag/MapPicker": {
+    "id": 3334,
+    "files": [
+      "static/css/fc1c9daac70c093b.css",
+      "static/chunks/d0deef33.bd75b11a952a2d3d.js",
+      "static/chunks/334.b68507148ce85f42.js"
+    ]
+  }
+}

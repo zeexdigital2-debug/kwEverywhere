@@ -58,6 +58,13 @@ export default function SiteHeader() {
                   Keyword Research
                 </Link>
                 <Link
+                  href="/dashboard/geotag"
+                  className="block px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#0b1528] hover:text-white transition-colors"
+                  onClick={() => setToolsOpen(false)}
+                >
+                  Geotag Photos
+                </Link>
+                <Link
                   href="/dashboard/keywords-finder"
                   className="block px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#0b1528] hover:text-white transition-colors"
                   onClick={() => setToolsOpen(false)}
