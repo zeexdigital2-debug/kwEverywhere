@@ -3,7 +3,7 @@ import axios from 'axios';
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
 const baseURL = rawApiUrl
   ? (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`)
-  : (typeof window !== 'undefined' ? '/api' : 'http://localhost:48920/api');
+  : (typeof window !== 'undefined' ? '/api' : 'https://seo-keyword-research-api.onrender.com/api');
 
 // Admin API client pointing to backend /api
 const adminApi = axios.create({

@@ -139,7 +139,7 @@
       ` : ''}
 
       <div class="kwew-footer">
-        <span>Powered by <a href="http://localhost:4000" target="_blank" class="kwew-footer-link">KWEveryWhere</a></span>
+        <span>Powered by <a href="https://kw-everywhere.vercel.app" target="_blank" class="kwew-footer-link">KWEveryWhere</a></span>
         <span>Free SEO Research Tool</span>
       </div>
     `;

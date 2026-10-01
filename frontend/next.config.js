@@ -1,4 +1,4 @@
-const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:48920';
+const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'https://seo-keyword-research-api.onrender.com';
 
 const nextConfig = {
   reactStrictMode: true,
