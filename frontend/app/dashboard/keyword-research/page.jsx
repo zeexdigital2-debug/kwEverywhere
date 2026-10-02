@@ -116,38 +116,17 @@ export default function KeywordResearchPage() {
             <Globe className="w-4 h-4 text-blue-600" />
             <span className="font-semibold text-slate-700">Target Country:</span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {COUNTRIES.slice(0, 6).map(c => (
-              <button
-                key={c.code}
-                onClick={() => setCountry(c.code)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                  country === c.code
-                    ? 'bg-[#0a192f] text-white border-[#0a192f] shadow-xs'
-                    : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                <span>{c.flag}</span>
-                <span>{c.code}</span>
-              </button>
+          <select
+            value={country}
+            onChange={e => setCountry(e.target.value)}
+            className="bg-white border border-slate-200 rounded-xl px-3.5 py-1.5 text-xs sm:text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-xs min-w-[200px]"
+          >
+            {COUNTRIES.map(c => (
+              <option key={c.code} value={c.code}>
+                {c.flag} {c.name} ({c.code})
+              </option>
             ))}
-            <select
-              value={country}
-              onChange={e => setCountry(e.target.value)}
-              className="bg-white border border-slate-200 rounded-full px-3 py-1 text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-xs"
-            >
-              {COUNTRIES.map(c => (
-                <option key={c.code} value={c.code}>
-                  {c.flag} {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          {selectedCountry && (
-            <span className="text-xs text-blue-600 font-semibold">
-              {selectedCountry.flag} {selectedCountry.name}
-            </span>
-          )}
+          </select>
         </div>
 
         {/* Keywords Textarea */}
