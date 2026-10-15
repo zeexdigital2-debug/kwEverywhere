@@ -1,15 +1,6 @@
-import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
-import { clsx } from 'clsx';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
-
-const jakarta = Plus_Jakarta_Sans({ 
-  subsets: ['latin'], 
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-sans' 
-});
-const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
 export const metadata = {
   title: 'KWEveryWhere - Free Keyword Intelligence & SERP Analytics',
@@ -20,6 +11,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="scroll-smooth dark">
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
         {/* Prevent dark/light mode flash */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function(){
@@ -39,7 +36,7 @@ export default function RootLayout({ children }) {
           })();
         `}} />
       </head>
-      <body className={clsx(jakarta.variable, jetbrains.variable, "min-h-screen font-sans antialiased selection:bg-teal-500/20")}>
+      <body className="min-h-screen font-sans antialiased selection:bg-teal-500/20">
         <ThemeProvider>
           <AnnouncementBanner />
           {children}
