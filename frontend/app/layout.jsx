@@ -5,6 +5,14 @@ import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 export const metadata = {
   title: 'KWEveryWhere - Free Keyword Intelligence & SERP Analytics',
   description: 'Full-stack SEO platform for keyword research, live SERP volume, CPC benchmarks, and domain authority metrics.',
+  icons: {
+    icon: [
+      { url: '/logo.png', type: 'image/png' },
+      { url: '/favicon.ico' },
+    ],
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({ children }) {
