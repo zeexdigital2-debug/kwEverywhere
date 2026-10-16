@@ -71,27 +71,6 @@ export default function SiteHeader() {
                 >
                   Remove Metadata
                 </Link>
-                <Link
-                  href="/dashboard/keywords-finder"
-                  className="block px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#0b1528] hover:text-white transition-colors"
-                  onClick={() => setToolsOpen(false)}
-                >
-                  Keywords Finder
-                </Link>
-                <Link
-                  href="/dashboard/local-keywords"
-                  className="block px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#0b1528] hover:text-white transition-colors"
-                  onClick={() => setToolsOpen(false)}
-                >
-                  Local Keywords
-                </Link>
-                <Link
-                  href="/dashboard/domain-metrics"
-                  className="block px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-[#0b1528] hover:text-white transition-colors"
-                  onClick={() => setToolsOpen(false)}
-                >
-                  Bulk DR / Domain Metrics
-                </Link>
               </div>
             )}
           </div>

@@ -466,10 +466,9 @@ export default function AboutPage() {
           <div>
             <h4 className="text-sm font-semibold text-white mb-4">Free Tools</h4>
             <ul className="space-y-2 text-xs">
-              <li><Link href="/dashboard/domain-metrics" className="hover:text-white transition-colors">Bulk DR Checker</Link></li>
               <li><Link href="/dashboard/keyword-research" className="hover:text-white transition-colors">Keyword Research</Link></li>
-              <li><Link href="/dashboard/keywords-finder" className="hover:text-white transition-colors">Keywords Finder</Link></li>
-              <li><Link href="/dashboard/local-keywords" className="hover:text-white transition-colors">Local Keywords</Link></li>
+              <li><Link href="/dashboard/geotag" className="hover:text-white transition-colors">Geotag Photos</Link></li>
+              <li><Link href="/dashboard/remove-metadata" className="hover:text-white transition-colors">Remove Metadata</Link></li>
             </ul>
           </div>
 
