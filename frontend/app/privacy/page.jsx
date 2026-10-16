@@ -32,21 +32,6 @@ export default function PrivacyPolicyPage() {
             <a href="https://www.kweverywhere.com" className="text-[#2563eb] hover:underline font-medium">https://www.kweverywhere.com</a> (the &ldquo;Service&rdquo;), handles information when you use our keyword research tool. We keep data collection to the minimum needed to run the Service.
           </p>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-slate-500">
-            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200">
-              <EyeOff className="w-3.5 h-3.5 text-emerald-600" />
-              <span>No Account Required</span>
-            </span>
-            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200">
-              <Lock className="w-3.5 h-3.5 text-blue-600" />
-              <span>No Google User Data Accessed</span>
-            </span>
-            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200">
-              <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-              <span>Google API Limited Use Compliant</span>
-            </span>
-          </div>
-
         </div>
       </section>
 
