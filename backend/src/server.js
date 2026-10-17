@@ -21,6 +21,7 @@ const historyRoutes = require('./routes/historyRoutes');
 const adminAuthRoutes = require('./routes/adminAuthRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const contentRoutes = require('./routes/contentRoutes');
+const googleAdsRoutes = require('./routes/googleAdsRoutes');
 
 const app = express();
 
@@ -76,6 +77,10 @@ app.use('/api/keyword-research', authMiddleware, keywordResearchRoutes);
 app.use('/api/keywords-finder', authMiddleware, keywordsFinderRoutes);
 app.use('/api/local-keywords', authMiddleware, localKeywordsRoutes);
 app.use('/api/domain-metrics', authMiddleware, domainMetricsRoutes);
+
+// Google Ads API Keyword Ideas Route
+app.use('/api/keywords', googleAdsRoutes);
+app.use('/api/keyword', googleAdsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

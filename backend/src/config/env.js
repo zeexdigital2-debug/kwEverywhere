@@ -11,5 +11,10 @@ module.exports = {
   FRONTEND_URL: process.env.FRONTEND_URL || 'https://kw-everywhere.vercel.app',
   ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin',
   ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH || '$2b$10$1Q8QbygYG2H7lAPP1nUJKuUePOR9bXtiggLHSnKOIc5Hd5jl/iMJG',
-  ADMIN_JWT_SECRET: process.env.ADMIN_JWT_SECRET || 'kw_admin_jwt_secret_key_99887766'
+  ADMIN_JWT_SECRET: process.env.ADMIN_JWT_SECRET || 'kw_admin_jwt_secret_key_99887766',
+  // Google Ads API OAuth credentials
+  GOOGLE_ADS_CLIENT_ID: process.env.GOOGLE_ADS_CLIENT_ID || '',
+  GOOGLE_ADS_CLIENT_SECRET: process.env.GOOGLE_ADS_CLIENT_SECRET || '',
+  GOOGLE_ADS_REFRESH_TOKEN: process.env.GOOGLE_ADS_REFRESH_TOKEN || '',
+  GOOGLE_ADS_CUSTOMER_ID: (process.env.GOOGLE_ADS_CUSTOMER_ID || '7500158188').replace(/[^0-9]/g, '')
 };
