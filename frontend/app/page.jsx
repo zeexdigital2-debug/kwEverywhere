@@ -725,6 +725,130 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* 2.7 GOOGLE ADS KEYWORD PLANNER POWERED SHOWCASE SECTION */}
+      <section className="py-14 sm:py-20 bg-gradient-to-b from-[#f8fafc] via-slate-50 to-[#f0f4f9] border-b border-slate-200/80 relative overflow-hidden">
+        {/* Glow ambient background effects */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[42rem] h-[22rem] bg-gradient-to-tr from-sky-400/15 via-[#2563eb]/15 to-indigo-500/10 blur-3xl rounded-full pointer-events-none -z-10"></div>
+
+        <div className="max-w-6xl xl:max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="bg-gradient-to-br from-[#070e1c] via-[#0b162b] to-[#0f2142] rounded-3xl sm:rounded-[2.5rem] border border-[#1e3a63]/80 shadow-2xl shadow-[#0a192f]/30 p-6 sm:p-10 lg:p-14 relative overflow-hidden">
+            
+            {/* Background Decorative Accent Ring */}
+            <div className="absolute -top-24 -right-24 w-80 h-80 bg-gradient-to-br from-[#38bdf8]/20 via-[#2563eb]/10 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+
+            <div className="max-w-4xl mx-auto text-center space-y-6">
+              
+              {/* Eyebrow Badge */}
+              <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-[#112240] border border-[#234575] text-[#38bdf8] text-xs font-bold uppercase tracking-wider shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Google Ads Keyword Planner Telemetry</span>
+                <span className="text-slate-500">•</span>
+                <span className="text-white">100% Free Forever</span>
+              </div>
+
+              {/* Main Headline */}
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.65rem] font-extrabold text-white tracking-tight leading-[1.2]">
+                KWEveryWhere is a <span className="bg-gradient-to-r from-[#38bdf8] via-sky-300 to-blue-400 bg-clip-text text-transparent">Free Keyword Research Tool</span>.
+              </h2>
+
+              {/* Subtitle / Core Statement */}
+              <p className="text-base sm:text-lg md:text-xl text-slate-300 leading-relaxed font-normal max-w-3xl mx-auto">
+                Enter a keyword to see its <span className="text-white font-semibold">monthly search volume</span>, <span className="text-white font-semibold">competition</span>, <span className="text-white font-semibold">CPC range</span> and <span className="text-white font-semibold">12-month trend</span>, powered by <span className="text-[#38bdf8] font-bold">Google Ads Keyword Planner</span> data.
+              </p>
+
+              {/* 4 Feature Cards corresponding to the 4 data points */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-4 text-left">
+                
+                {/* 1. Monthly Search Volume */}
+                <div className="bg-[#070e1a]/90 rounded-2xl border border-[#193054] p-4 sm:p-5 hover:border-[#38bdf8]/50 hover:-translate-y-1 transition-all">
+                  <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 text-[#38bdf8] flex items-center justify-center mb-3">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-bold text-white mb-1">Monthly Search Volume</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Exact monthly query frequency calculated across 15+ target international locations.
+                  </p>
+                </div>
+
+                {/* 2. Competition */}
+                <div className="bg-[#070e1a]/90 rounded-2xl border border-[#193054] p-4 sm:p-5 hover:border-[#38bdf8]/50 hover:-translate-y-1 transition-all">
+                  <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-3">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-bold text-white mb-1">Competition Density</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Real-time PPC competition index and advertiser crowding on search engine page 1.
+                  </p>
+                </div>
+
+                {/* 3. CPC Range */}
+                <div className="bg-[#070e1a]/90 rounded-2xl border border-[#193054] p-4 sm:p-5 hover:border-[#38bdf8]/50 hover:-translate-y-1 transition-all">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M16 8h-6a2 2 0 100 4h4a2 2 0 110 4H8M12 6v2m0 8v2" />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-bold text-white mb-1">Commercial CPC Range</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Accurate low and high-range bids advertisers pay per commercial click in USD.
+                  </p>
+                </div>
+
+                {/* 4. 12-Month Trend */}
+                <div className="bg-[#070e1a]/90 rounded-2xl border border-[#193054] p-4 sm:p-5 hover:border-[#38bdf8]/50 hover:-translate-y-1 transition-all">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-3">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                      <polyline points="17 6 23 6 23 12" />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-bold text-white mb-1">12-Month Search Trend</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Historical 12-month seasonality trends to pinpoint peak buyer interest and demand spikes.
+                  </p>
+                </div>
+
+              </div>
+
+              {/* Action Bar / CTAs */}
+              <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Link
+                  href="/dashboard/keyword-research"
+                  className="w-full sm:w-auto px-8 py-3.5 text-sm sm:text-base font-semibold text-white bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-500 hover:to-sky-500 rounded-xl shadow-lg shadow-sky-500/25 hover:shadow-xl hover:shadow-sky-500/35 hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center space-x-2"
+                >
+                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="7" />
+                    <line x1="21" y1="21" x2="16.5" y2="16.5" />
+                    <line x1="8" y1="11" x2="14" y2="11" />
+                    <line x1="11" y1="8" x2="11" y2="14" />
+                  </svg>
+                  <span>Start Free Keyword Research</span>
+                </Link>
+
+                <Link
+                  href="/dashboard"
+                  className="w-full sm:w-auto px-7 py-3.5 text-sm sm:text-base font-semibold text-slate-300 hover:text-white bg-[#101e38] hover:bg-[#152747] border border-[#1e3458] hover:border-[#38bdf8]/50 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2"
+                >
+                  <span>Open Full Dashboard</span>
+                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </Link>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
       {/* 3. HOW IT WORKS SECTION (Simple 3-Step Process) */}
       <section className="pt-10 pb-24 bg-gradient-to-b from-[#f8fafc] to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
