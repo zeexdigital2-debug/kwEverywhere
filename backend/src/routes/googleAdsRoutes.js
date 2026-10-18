@@ -4,11 +4,13 @@ const { generateKeywordIdeas } = require('../services/googleAdsService');
 
 /**
  * POST /api/keywords/generate-keyword-ideas
- * Body: { keyword: string } or { kw: string }
+ * Body: { keyword: string, limit?: number } or { kw: string, limit?: number }
  */
 router.post('/generate-keyword-ideas', async (req, res) => {
   try {
     const keyword = req.body.keyword || req.body.kw;
+    const limit = req.body.limit || req.query.limit;
+
     if (!keyword || typeof keyword !== 'string' || !keyword.trim()) {
       return res.status(400).json({
         success: false,
@@ -16,12 +18,13 @@ router.post('/generate-keyword-ideas', async (req, res) => {
       });
     }
 
-    const results = await generateKeywordIdeas(keyword.trim());
+    const results = await generateKeywordIdeas(keyword.trim(), { limit });
 
     return res.json({
       success: true,
       keyword: keyword.trim(),
       count: results.length,
+      limit: results.length,
       results
     });
   } catch (err) {
@@ -34,11 +37,13 @@ router.post('/generate-keyword-ideas', async (req, res) => {
 });
 
 /**
- * GET /api/keywords/generate-keyword-ideas?keyword=...
+ * GET /api/keywords/generate-keyword-ideas?keyword=...&limit=...
  */
 router.get('/generate-keyword-ideas', async (req, res) => {
   try {
     const keyword = req.query.keyword || req.query.kw || req.query.q;
+    const limit = req.query.limit;
+
     if (!keyword || typeof keyword !== 'string' || !keyword.trim()) {
       return res.status(400).json({
         success: false,
@@ -46,12 +51,13 @@ router.get('/generate-keyword-ideas', async (req, res) => {
       });
     }
 
-    const results = await generateKeywordIdeas(keyword.trim());
+    const results = await generateKeywordIdeas(keyword.trim(), { limit });
 
     return res.json({
       success: true,
       keyword: keyword.trim(),
       count: results.length,
+      limit: results.length,
       results
     });
   } catch (err) {

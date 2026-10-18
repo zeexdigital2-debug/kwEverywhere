@@ -67,21 +67,27 @@ async function getAccessToken() {
  * Results are cached for 24 hours.
  *
  * @param {string} keyword
+ * @param {string} keyword
+ * @param {Object} [options]
+ * @param {number} [options.limit=50] Limit returned results (max 200, default 50)
  * @returns {Promise<Array>} List of keyword ideas with volume, competition, cpc, and 12-month trend
  */
-async function generateKeywordIdeas(keyword) {
+async function generateKeywordIdeas(keyword, options = {}) {
   if (!keyword || typeof keyword !== 'string') {
     throw new Error('A valid keyword string is required.');
   }
+
+  // Parse limit: default 50, min 1, max 200
+  const limit = Math.min(200, Math.max(1, Number(options.limit) || 50));
 
   const cleanKw = keyword.trim();
   const cacheKey = cleanKw.toLowerCase();
   const now = Date.now();
 
-  // 1. Check 24-hour cache
+  // 1. Check 24-hour cache (return sliced copy by requested limit)
   const cached = keywordCache.get(cacheKey);
   if (cached && now < cached.expiresAt) {
-    return cached.data;
+    return cached.data.slice(0, limit);
   }
 
   // 2. Obtain valid Access Token
@@ -127,12 +133,12 @@ async function generateKeywordIdeas(keyword) {
       // Competition enum (LOW, MEDIUM, HIGH, etc.)
       const competition = metrics.competition || 'UNSPECIFIED';
 
-      // CPC in USD: (bid micros / 1,000,000)
-      const lowBidMicros = metrics.lowTopOfPageBidMicros ? Number(metrics.lowTopOfPageBidMicros) : 0;
-      const highBidMicros = metrics.highTopOfPageBidMicros ? Number(metrics.highTopOfPageBidMicros) : 0;
-      
-      const lowCpc = lowBidMicros > 0 ? Number((lowBidMicros / 1000000).toFixed(2)) : 0;
-      const highCpc = highBidMicros > 0 ? Number((highBidMicros / 1000000).toFixed(2)) : 0;
+      // CPC in USD: lowTopOfPageBidMicros and highTopOfPageBidMicros divided strictly by 1,000,000 and rounded to 2 decimals
+      const rawLowMicros = Number(metrics.lowTopOfPageBidMicros) || 0;
+      const rawHighMicros = Number(metrics.highTopOfPageBidMicros) || 0;
+
+      const lowCpc = rawLowMicros > 0 ? Number((rawLowMicros / 1000000).toFixed(2)) : 0;
+      const highCpc = rawHighMicros > 0 ? Number((rawHighMicros / 1000000).toFixed(2)) : 0;
       const cpc = highCpc > 0 ? highCpc : lowCpc;
 
       // Monthly Search Volumes (12 months trend)
@@ -155,13 +161,16 @@ async function generateKeywordIdeas(keyword) {
       };
     });
 
-    // 5. Cache result for 24 hours
+    // Sort descending by avgMonthlySearches
+    formatted.sort((a, b) => b.avgMonthlySearches - a.avgMonthlySearches);
+
+    // 5. Cache full sorted results for 24 hours
     keywordCache.set(cacheKey, {
       data: formatted,
       expiresAt: now + CACHE_TTL_MS
     });
 
-    return formatted;
+    return formatted.slice(0, limit);
   } catch (err) {
     // Sanitize error: never log full request headers or secrets
     const status = err.response?.status;
