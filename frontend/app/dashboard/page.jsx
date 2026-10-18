@@ -1,14 +1,21 @@
 'use client';
 import Link from 'next/link';
-import { Search, Camera, ShieldOff, ArrowRight } from 'lucide-react';
+import { Search, Lightbulb, Camera, ShieldOff, ArrowRight } from 'lucide-react';
 
 const tools = [
   { 
     name: 'Keyword Research', 
-    desc: 'Analyze bulk keywords for volume, trends, and difficulty across 15+ countries.', 
+    desc: 'Analyze bulk keywords for exact search volumes, trends, and difficulty across 15+ countries.', 
     icon: Search, 
     href: '/dashboard/keyword-research',
     color: 'from-blue-400 to-blue-600'
+  },
+  { 
+    name: 'Keywords Finder', 
+    desc: 'Discover up to 200 related keyword ideas and variants from a single seed keyword.', 
+    icon: Lightbulb, 
+    href: '/dashboard/keywords-finder',
+    color: 'from-sky-400 to-indigo-600'
   },
   { 
     name: 'Geotag Photos', 

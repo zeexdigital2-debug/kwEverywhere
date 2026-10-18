@@ -17,19 +17,61 @@ const FX_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 let cachedAccessToken = null;
 let accessTokenExpiresAt = 0;
 
+// Global daily Google Ads API call tracking (Cap: 8,000 calls / day)
+const GLOBAL_DAILY_CALL_LIMIT = 8000;
+let globalApiStats = {
+  dateStr: new Date().toISOString().slice(0, 10), // "YYYY-MM-DD"
+  callCount: 0
+};
+
+/**
+ * Check and enforce global daily Google Ads API call cap.
+ * Throws a 429 error if limit would be exceeded.
+ */
+function checkGlobalDailyCap(callsNeeded = 1) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (globalApiStats.dateStr !== todayStr) {
+    globalApiStats = { dateStr: todayStr, callCount: 0 };
+  }
+  if (globalApiStats.callCount + callsNeeded > GLOBAL_DAILY_CALL_LIMIT) {
+    const err = new Error('Daily limit reached, try again tomorrow');
+    err.isDailyLimit = true;
+    err.statusCode = 429;
+    throw err;
+  }
+}
+
+/**
+ * Record actual Google Ads API calls made.
+ */
+function recordGlobalApiCalls(callsMade = 1) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (globalApiStats.dateStr !== todayStr) {
+    globalApiStats = { dateStr: todayStr, callCount: 0 };
+  }
+  globalApiStats.callCount += callsMade;
+}
+
+/**
+ * Get current global API call stats for monitoring.
+ */
+function getGlobalApiCallStats() {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (globalApiStats.dateStr !== todayStr) {
+    globalApiStats = { dateStr: todayStr, callCount: 0 };
+  }
+  return { ...globalApiStats, limit: GLOBAL_DAILY_CALL_LIMIT };
+}
+
 /**
  * Fetch automatic USD per PKR exchange rate.
- * - GET https://open.er-api.com/v6/latest/USD (free, no key required)
+ * - GET https://open.er-api.com/v6/latest/USD
  * - usdPerPkr = 1 / rates.PKR
  * - In-memory 24-hour cache
- * - Fallback: last valid cached rate, or env.USD_PKR_RATE (default 280)
- *
- * @returns {Promise<number>} usdPerPkr multiplier
  */
 async function getUsdPerPkr() {
   const now = Date.now();
 
-  // Return active cache if still valid
   if (fxCache.usdPerPkr && now < fxCache.expiresAt) {
     return fxCache.usdPerPkr;
   }
@@ -56,19 +98,15 @@ async function getUsdPerPkr() {
   } catch (err) {
     console.warn('[GoogleAdsService] Live exchange rate fetch failed, using fallback:', err.message);
 
-    // Fallback 1: previous valid cached rate
     if (fxCache.lastValidRate) {
       return fxCache.lastValidRate;
     }
-
-    // Fallback 2: env.js USD_PKR_RATE (default 280)
     return fallbackUsdPerPkr;
   }
 }
 
 /**
  * Obtain a fresh Google OAuth2 access token using the refresh token.
- * Tokens are cached in-memory until ~1 minute before expiration.
  */
 async function getAccessToken() {
   const now = Date.now();
@@ -112,14 +150,13 @@ async function getAccessToken() {
 
     return cachedAccessToken;
   } catch (err) {
-    // Sanitize error: never log or expose client secret or tokens
     const errMsg = err.response?.data?.error_description || err.response?.data?.error || err.message;
     console.error('[GoogleAdsService] OAuth token refresh failed:', errMsg);
     throw new Error(`Google OAuth error: ${errMsg}`);
   }
 }
 
-// Country code to Google Ads geoTargetConstants ID lookup
+// Country code to Google Ads geoTargetConstants ID lookup table
 const GEO_TARGET_LOOKUP = {
   US: '2840', // United States
   GB: '2826', // United Kingdom
@@ -166,18 +203,73 @@ function resolveGeoTargetId(countryOrGeo) {
 }
 
 /**
- * Generate keyword ideas from Google Ads API v24 for a keyword or list of keywords.
- * Results are cached in-memory for 24 hours.
+ * Format Google Ads metrics into unified model with USD CPC conversion.
+ */
+function parseMetricsItem(item, usdPerPkr) {
+  const text = item.text || '';
+  const metrics = item.keywordMetrics || item.keywordIdeaMetrics || {};
+
+  const avgMonthlySearches = metrics.avgMonthlySearches
+    ? Number(metrics.avgMonthlySearches)
+    : (metrics.avg_monthly_searches ? Number(metrics.avg_monthly_searches) : 0);
+
+  const competition = String(metrics.competition || 'UNSPECIFIED').toUpperCase();
+
+  const rawAvgCpcMicros = Number(metrics.averageCpcMicros ?? metrics.average_cpc_micros ?? metrics.avgCpcMicros) || 0;
+  const rawLowMicros = Number(metrics.lowTopOfPageBidMicros ?? metrics.low_top_of_page_bid_micros) || 0;
+  const rawHighMicros = Number(metrics.highTopOfPageBidMicros ?? metrics.high_top_of_page_bid_micros) || 0;
+
+  const avgPkr = rawAvgCpcMicros > 0 ? (rawAvgCpcMicros / 1000000) : 0;
+  const lowPkr = rawLowMicros > 0 ? (rawLowMicros / 1000000) : 0;
+  const highPkr = rawHighMicros > 0 ? (rawHighMicros / 1000000) : 0;
+
+  const avgCpc = avgPkr > 0 ? Number((avgPkr * usdPerPkr).toFixed(2)) : 0;
+  const lowCpc = lowPkr > 0 ? Number((lowPkr * usdPerPkr).toFixed(2)) : 0;
+  const highCpc = highPkr > 0 ? Number((highPkr * usdPerPkr).toFixed(2)) : 0;
+
+  const cpc = avgCpc > 0
+    ? avgCpc
+    : (lowCpc > 0 && highCpc > 0
+        ? Number(((lowCpc + highCpc) / 2).toFixed(2))
+        : (lowCpc || highCpc || 0));
+
+  const rawVolumes = metrics.monthlySearchVolumes || metrics.monthly_search_volumes || [];
+  const monthlySearchVolumes = (Array.isArray(rawVolumes) ? rawVolumes : []).map((m) => ({
+    year: Number(m.year),
+    month: m.month,
+    monthlySearches: Number(m.monthlySearches ?? m.monthly_searches ?? 0)
+  }));
+
+  return {
+    text,
+    avgMonthlySearches,
+    competition,
+    cpc,
+    averageCpc: avgCpc,
+    cpcRange: {
+      low: lowCpc,
+      high: highCpc
+    },
+    currency: 'USD',
+    monthlySearchVolumes
+  };
+}
+
+/**
+ * (A) Keyword Research: Google Ads generateKeywordHistoricalMetrics
+ * - Exact keywords metrics only (no related ideas/variations)
+ * - 1 to 3000 keywords in a single call (chunks if > 10,000)
+ * - 24-hour in-memory cache per keyword + country + language
+ * - ONLY cache-miss keywords are sent to Google Ads API
+ * - Global daily limit: 8,000 API calls (cache-miss only)
  *
- * @param {string|string[]} keywordInput One or more keywords
+ * @param {string|string[]} keywordInput One or more keywords (up to 3000)
  * @param {Object} [options]
  * @param {string} [options.country='US'] Country code (US, PK, GB, etc.) or geo numeric ID
- * @param {string} [options.language='languageConstants/1000'] Google Ads language constant (default: 1000 for English)
- * @param {number} [options.limit=50] Limit returned results (max 200, default 50)
- * @returns {Promise<Array>} List of keyword ideas with volume, competition, cpc in USD, and 12-month trend
+ * @param {string} [options.language='languageConstants/1000'] Language constant
+ * @returns {Promise<Array>} List of exact-match keyword metrics
  */
-async function generateKeywordIdeas(keywordInput, options = {}) {
-  // Normalize keywordInput to non-empty string array
+async function generateKeywordHistoricalMetrics(keywordInput, options = {}) {
   const rawKeywords = Array.isArray(keywordInput)
     ? keywordInput
     : (typeof keywordInput === 'string' ? keywordInput.split(/[\n,]+/) : []);
@@ -192,28 +284,191 @@ async function generateKeywordIdeas(keywordInput, options = {}) {
     throw new Error('A valid keyword string or array of keywords is required.');
   }
 
-  // Parse limit: default 50, min 1, max 200
-  const limit = Math.min(200, Math.max(1, Number(options.limit) || 50));
-
-  // Resolve Geo Target & Language
-  const geoId = resolveGeoTargetId(options.country || options.geoId || options.geoTargetConstant || 'US');
+  const geoId = resolveGeoTargetId(options.country || options.geoId || 'US');
   const language = options.language || 'languageConstants/1000';
-
-  // 1. Check 24-hour cache
-  const cacheKey = `${keywordsList.map(k => k.toLowerCase()).sort().join('|')}::${geoId}::${language}`;
   const now = Date.now();
-  const cached = keywordCache.get(cacheKey);
-  if (cached && now < cached.expiresAt) {
-    return cached.data.slice(0, limit);
+
+  // 1. Check 24-hour cache for each individual keyword
+  const resultsMap = new Map();
+  const cacheMisses = [];
+
+  for (const kw of keywordsList) {
+    const cacheKey = `hist:${kw.toLowerCase()}::${geoId}::${language}`;
+    const cached = keywordCache.get(cacheKey);
+    if (cached && now < cached.expiresAt) {
+      resultsMap.set(kw.toLowerCase(), cached.data);
+    } else {
+      cacheMisses.push(kw);
+    }
   }
 
-  // 2. Obtain valid Access Token & USD/PKR Exchange Rate concurrently
+  // 2. If all keywords were cached (100% cache hit), return immediately
+  // Cache hits do NOT count against the global daily API call limit
+  if (cacheMisses.length === 0) {
+    return keywordsList.map(kw => resultsMap.get(kw.toLowerCase()) || {
+      text: kw,
+      avgMonthlySearches: 0,
+      competition: 'UNSPECIFIED',
+      cpc: 0,
+      averageCpc: 0,
+      cpcRange: { low: 0, high: 0 },
+      currency: 'USD',
+      monthlySearchVolumes: []
+    });
+  }
+
+  // 3. For cache misses, chunk in groups of 10,000 (Google Ads API limit)
+  // For 1 to 3000 keywords, this is a single chunk / single call
+  const CHUNK_SIZE = 10000;
+  const chunks = [];
+  for (let i = 0; i < cacheMisses.length; i += CHUNK_SIZE) {
+    chunks.push(cacheMisses.slice(i, i + CHUNK_SIZE));
+  }
+
+  // Check global daily cap before making external Google API calls
+  checkGlobalDailyCap(chunks.length);
+
+  // Obtain access token & exchange rate
   const [accessToken, usdPerPkr] = await Promise.all([
     getAccessToken(),
     getUsdPerPkr()
   ]);
 
-  // 3. Prepare Customer ID & Endpoint
+  const customerId = (env.GOOGLE_ADS_CUSTOMER_ID || '7500158188').replace(/[^0-9]/g, '');
+  if (!customerId) {
+    throw new Error('Google Ads Customer ID is missing or invalid.');
+  }
+
+  const endpoint = `https://googleads.googleapis.com/v24/customers/${customerId}:generateKeywordHistoricalMetrics`;
+
+  for (const chunk of chunks) {
+    const requestBody = {
+      keywords: chunk,
+      geoTargetConstants: [`geoTargetConstants/${geoId}`],
+      language,
+      keywordPlanNetwork: 'GOOGLE_SEARCH'
+    };
+
+    try {
+      const response = await axios.post(endpoint, requestBody, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 55000 // 55s timeout, well within Vercel's 60s maxDuration
+      });
+
+      // Increment global API call counter
+      recordGlobalApiCalls(1);
+
+      const items = response.data?.results || [];
+
+      // Keep track of which keywords in this chunk had metrics returned
+      const returnedSet = new Set();
+
+      for (const item of items) {
+        const parsed = parseMetricsItem(item, usdPerPkr);
+        const lowerText = parsed.text.toLowerCase().trim();
+        if (lowerText) {
+          returnedSet.add(lowerText);
+          resultsMap.set(lowerText, parsed);
+
+          // Cache individual keyword data for 24 hours
+          keywordCache.set(`hist:${lowerText}::${geoId}::${language}`, {
+            data: parsed,
+            expiresAt: now + CACHE_TTL_MS
+          });
+        }
+      }
+
+      // For any requested keyword that Google didn't return data for, cache a zero-data fallback
+      for (const kw of chunk) {
+        const lowerKw = kw.toLowerCase().trim();
+        if (!returnedSet.has(lowerKw)) {
+          const zeroMetric = {
+            text: kw,
+            avgMonthlySearches: 0,
+            competition: 'UNSPECIFIED',
+            cpc: 0,
+            averageCpc: 0,
+            cpcRange: { low: 0, high: 0 },
+            currency: 'USD',
+            monthlySearchVolumes: []
+          };
+          resultsMap.set(lowerKw, zeroMetric);
+          keywordCache.set(`hist:${lowerKw}::${geoId}::${language}`, {
+            data: zeroMetric,
+            expiresAt: now + CACHE_TTL_MS
+          });
+        }
+      }
+    } catch (err) {
+      const status = err.response?.status;
+      const apiError = err.response?.data?.error?.message || err.response?.data?.message || err.message;
+      console.error(`[GoogleAdsService] Historical Metrics call failed (${status || 'network'}):`, apiError);
+      throw new Error(`Google Ads API error: ${apiError}`);
+    }
+  }
+
+  // Return formatted results in the exact order requested by user
+  return keywordsList.map(kw => resultsMap.get(kw.toLowerCase().trim()) || {
+    text: kw,
+    avgMonthlySearches: 0,
+    competition: 'UNSPECIFIED',
+    cpc: 0,
+    averageCpc: 0,
+    cpcRange: { low: 0, high: 0 },
+    currency: 'USD',
+    monthlySearchVolumes: []
+  });
+}
+
+/**
+ * (B) Keywords Finder: Google Ads generateKeywordIdeas
+ * - Single seed keyword to discover related ideas and close variants
+ * - Volume descending sort, default 200 results
+ * - 24-hour cache per seed keyword + country + language
+ * - Global daily limit: 8,000 API calls (cache-miss only)
+ *
+ * @param {string} seedKeyword A single seed keyword
+ * @param {Object} [options]
+ * @param {string} [options.country='US'] Country code or geo numeric ID
+ * @param {string} [options.language='languageConstants/1000'] Language constant
+ * @param {number} [options.limit=200] Results limit (default 200)
+ * @returns {Promise<Array>} List of related keyword ideas sorted by volume descending
+ */
+async function generateKeywordIdeas(seedKeyword, options = {}) {
+  const seed = String(seedKeyword || '').trim();
+  if (!seed) {
+    throw new Error('A single seed keyword is required.');
+  }
+
+  // Strict single-keyword check: no commas or newlines
+  if (seed.includes(',') || seed.includes('\n') || seed.includes('\r')) {
+    throw new Error('Keywords Finder works with one keyword at a time. Enter a single keyword to get related ideas.');
+  }
+
+  const limit = Math.min(200, Math.max(1, Number(options.limit) || 200));
+  const geoId = resolveGeoTargetId(options.country || options.geoId || 'US');
+  const language = options.language || 'languageConstants/1000';
+  const now = Date.now();
+
+  // 1. Check 24-hour cache
+  const cacheKey = `ideas:${seed.toLowerCase()}::${geoId}::${language}`;
+  const cached = keywordCache.get(cacheKey);
+  if (cached && now < cached.expiresAt) {
+    return cached.data.slice(0, limit);
+  }
+
+  // 2. Check global daily cap before calling Google Ads API
+  checkGlobalDailyCap(1);
+
+  // 3. Obtain access token & exchange rate concurrently
+  const [accessToken, usdPerPkr] = await Promise.all([
+    getAccessToken(),
+    getUsdPerPkr()
+  ]);
+
   const customerId = (env.GOOGLE_ADS_CUSTOMER_ID || '7500158188').replace(/[^0-9]/g, '');
   if (!customerId) {
     throw new Error('Google Ads Customer ID is missing or invalid.');
@@ -221,109 +476,46 @@ async function generateKeywordIdeas(keywordInput, options = {}) {
 
   const endpoint = `https://googleads.googleapis.com/v24/customers/${customerId}:generateKeywordIdeas`;
 
-  // 4. Batch keywords in chunks of up to 20 (Google Ads API max seeds per request)
-  const chunks = [];
-  for (let i = 0; i < keywordsList.length; i += 20) {
-    chunks.push(keywordsList.slice(i, i + 20));
-  }
+  const requestBody = {
+    keywordSeed: {
+      keywords: [seed]
+    },
+    geoTargetConstants: [`geoTargetConstants/${geoId}`],
+    language,
+    keywordPlanNetwork: 'GOOGLE_SEARCH'
+  };
 
   try {
-    const allRawResults = [];
+    const response = await axios.post(endpoint, requestBody, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 55000
+    });
 
-    for (const chunk of chunks) {
-      const requestBody = {
-        keywordSeed: {
-          keywords: chunk
-        },
-        geoTargetConstants: [`geoTargetConstants/${geoId}`],
-        language,
-        keywordPlanNetwork: 'GOOGLE_SEARCH'
-      };
+    // Increment global API call counter
+    recordGlobalApiCalls(1);
 
-      const response = await axios.post(endpoint, requestBody, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 15000
-      });
+    const rawResults = response.data?.results || [];
 
-      const batch = response.data?.results || [];
-      allRawResults.push(...batch);
-    }
-
-    // Deduplicate merged results by lowercase keyword text
+    // Deduplicate by lowercase keyword text
     const seenKw = new Set();
-    const uniqueRawResults = [];
-    for (const item of allRawResults) {
-      const kwText = (item.text || '').trim();
-      const lower = kwText.toLowerCase();
-      if (kwText && !seenKw.has(lower)) {
+    const formatted = [];
+
+    for (const item of rawResults) {
+      const parsed = parseMetricsItem(item, usdPerPkr);
+      const lower = parsed.text.toLowerCase().trim();
+      if (lower && !seenKw.has(lower)) {
         seenKw.add(lower);
-        uniqueRawResults.push(item);
+        formatted.push(parsed);
       }
     }
-
-    // 5. Format response: text, avgMonthlySearches, competition, CPC (converted to USD), currency, monthlySearchVolumes
-    const formatted = uniqueRawResults.map((item) => {
-      const text = item.text || '';
-      const metrics = item.keywordIdeaMetrics || {};
-
-      // Average monthly searches
-      const avgMonthlySearches = metrics.avgMonthlySearches ? Number(metrics.avgMonthlySearches) : 0;
-
-      // Competition enum (LOW, MEDIUM, HIGH, etc.)
-      const competition = metrics.competition || 'UNSPECIFIED';
-
-      // CPC conversion:
-      // Google Ads account currency is PKR.
-      // Convert averageCpcMicros (PKR) to USD using usdPerPkr.
-      // lowTopOfPageBidMicros and highTopOfPageBidMicros remain as cpcRange (low / high).
-      const rawAvgCpcMicros = Number(metrics.averageCpcMicros ?? metrics.average_cpc_micros ?? metrics.avgCpcMicros) || 0;
-      const rawLowMicros = Number(metrics.lowTopOfPageBidMicros ?? metrics.low_top_of_page_bid_micros) || 0;
-      const rawHighMicros = Number(metrics.highTopOfPageBidMicros ?? metrics.high_top_of_page_bid_micros) || 0;
-
-      const avgPkr = rawAvgCpcMicros > 0 ? (rawAvgCpcMicros / 1000000) : 0;
-      const lowPkr = rawLowMicros > 0 ? (rawLowMicros / 1000000) : 0;
-      const highPkr = rawHighMicros > 0 ? (rawHighMicros / 1000000) : 0;
-
-      const avgCpc = avgPkr > 0 ? Number((avgPkr * usdPerPkr).toFixed(2)) : 0;
-      const lowCpc = lowPkr > 0 ? Number((lowPkr * usdPerPkr).toFixed(2)) : 0;
-      const highCpc = highPkr > 0 ? Number((highPkr * usdPerPkr).toFixed(2)) : 0;
-
-      // Use averageCpc as primary cpc value (USD) instead of highTopOfPageBid
-      const cpc = avgCpc > 0
-        ? avgCpc
-        : (lowCpc > 0 && highCpc > 0
-            ? Number(((lowCpc + highCpc) / 2).toFixed(2))
-            : (lowCpc || highCpc || 0));
-
-      // Monthly Search Volumes (12 months trend)
-      const monthlySearchVolumes = (metrics.monthlySearchVolumes || []).map((m) => ({
-        year: Number(m.year),
-        month: m.month,
-        monthlySearches: Number(m.monthlySearches || 0)
-      }));
-
-      return {
-        text,
-        avgMonthlySearches,
-        competition,
-        cpc,
-        averageCpc: avgCpc,
-        cpcRange: {
-          low: lowCpc,
-          high: highCpc
-        },
-        currency: 'USD',
-        monthlySearchVolumes
-      };
-    });
 
     // Sort descending by avgMonthlySearches
     formatted.sort((a, b) => b.avgMonthlySearches - a.avgMonthlySearches);
 
-    // 6. Cache full sorted results for 24 hours
+    // Cache full result array for 24 hours
     keywordCache.set(cacheKey, {
       data: formatted,
       expiresAt: now + CACHE_TTL_MS
@@ -331,10 +523,9 @@ async function generateKeywordIdeas(keywordInput, options = {}) {
 
     return formatted.slice(0, limit);
   } catch (err) {
-    // Sanitize error: never log full request headers or secrets
     const status = err.response?.status;
     const apiError = err.response?.data?.error?.message || err.response?.data?.message || err.message;
-    console.error(`[GoogleAdsService] API call failed (${status || 'network'}):`, apiError);
+    console.error(`[GoogleAdsService] Keyword Ideas call failed (${status || 'network'}):`, apiError);
     throw new Error(`Google Ads API error: ${apiError}`);
   }
 }
@@ -342,7 +533,11 @@ async function generateKeywordIdeas(keywordInput, options = {}) {
 module.exports = {
   getAccessToken,
   getUsdPerPkr,
+  generateKeywordHistoricalMetrics,
   generateKeywordIdeas,
   resolveGeoTargetId,
-  GEO_TARGET_LOOKUP
+  GEO_TARGET_LOOKUP,
+  checkGlobalDailyCap,
+  recordGlobalApiCalls,
+  getGlobalApiCallStats
 };

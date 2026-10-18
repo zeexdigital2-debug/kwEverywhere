@@ -1,12 +1,13 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Search, Camera, ShieldOff } from 'lucide-react';
+import { LayoutDashboard, Search, Lightbulb, Camera, ShieldOff } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Keyword Research', href: '/dashboard/keyword-research', icon: Search },
+  { name: 'Keywords Finder', href: '/dashboard/keywords-finder', icon: Lightbulb },
   { name: 'Geotag Photos', href: '/dashboard/geotag', icon: Camera },
   { name: 'Remove Metadata', href: '/dashboard/remove-metadata', icon: ShieldOff },
 ];

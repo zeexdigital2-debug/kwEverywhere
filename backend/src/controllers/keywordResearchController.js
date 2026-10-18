@@ -1,32 +1,11 @@
-const { generateKeywordIdeas } = require('../services/googleAdsService');
+const { generateKeywordHistoricalMetrics } = require('../services/googleAdsService');
+const {
+  calculateOpportunityScore,
+  calculateTrendDirection,
+  normalizeCompetition
+} = require('../utils/keywordMetricsHelper');
 
-const MAX_BULK_KEYWORDS = 500;
-
-/**
- * Calculate opportunity score (0-100) based on volume, competition, and keyword length
- */
-function calculateOpportunityScore(kw, volume, competitionLevel) {
-  const compScore = competitionLevel === 'low' ? 70 : competitionLevel === 'medium' ? 40 : 15;
-  const volScore = volume > 10000 ? 30 : volume > 1000 ? 20 : volume > 100 ? 10 : 5;
-  const words = String(kw || '').trim().split(/\s+/).length;
-  const lengthBonus = words >= 3 ? 15 : 0;
-  return Math.min(100, compScore + volScore + lengthBonus);
-}
-
-/**
- * Calculate trend direction ('rising' | 'falling' | 'stable') from monthly volume array
- */
-function calculateTrendDirection(sparkline) {
-  if (!Array.isArray(sparkline) || sparkline.length < 4) return 'stable';
-  const first3 = sparkline.slice(0, 3).reduce((a, b) => a + b, 0) / 3;
-  const last3 = sparkline.slice(-3).reduce((a, b) => a + b, 0) / 3;
-  const delta = last3 - first3;
-  const baseline = Math.max(first3, 10);
-  const pct = (delta / baseline) * 100;
-  if (pct > 12) return 'rising';
-  if (pct < -12) return 'falling';
-  return 'stable';
-}
+const MAX_BULK_KEYWORDS = 3000;
 
 /**
  * POST /api/keyword-research
@@ -54,32 +33,23 @@ async function researchKeywords(req, res) {
       });
     }
 
-    // Enforce max bulk cap
+    // Support up to 3,000 keywords
     const keywordsToAnalyze = cleaned.slice(0, MAX_BULK_KEYWORDS);
 
-    // Fetch real Google Ads metrics (cached 24h, automatic PKR->USD CPC conversion)
-    const googleResults = await generateKeywordIdeas(keywordsToAnalyze, {
-      country: country || 'US',
-      limit: Math.max(50, Math.min(200, keywordsToAnalyze.length * 5))
+    // Fetch exact Google Ads historical metrics (cached 24h per keyword, USD CPC conversion)
+    const googleResults = await generateKeywordHistoricalMetrics(keywordsToAnalyze, {
+      country: country || 'US'
     });
 
-    // Map Google Ads results to the exact shape expected by frontend DataTable:
-    // { keyword, volume, competition ('low'|'medium'|'high'), cpc ($USD), opportunity (0-100), sparkline, trend }
+    // Map Google Ads results to the exact shape expected by frontend DataTable
     const mappedResults = googleResults.map((item) => {
       const kw = item.text || '';
       const volume = typeof item.avgMonthlySearches === 'number' ? item.avgMonthlySearches : 0;
-
-      // Map Google Ads competition enum (LOW, MEDIUM, HIGH) to frontend badge values ('low', 'medium', 'high')
-      const rawComp = String(item.competition || '').toUpperCase();
-      let competition = 'medium';
-      if (rawComp === 'LOW') competition = 'low';
-      else if (rawComp === 'HIGH') competition = 'high';
-      else if (rawComp === 'MEDIUM') competition = 'medium';
-
+      const competition = normalizeCompetition(item.competition);
       const cpc = typeof item.cpc === 'number' ? item.cpc : 0;
+      const averageCpc = typeof item.averageCpc === 'number' ? item.averageCpc : cpc;
       const opportunity = calculateOpportunityScore(kw, volume, competition);
 
-      // Extract 12-month trend array for SparklineChart
       const monthlyVolumes = Array.isArray(item.monthlySearchVolumes) ? item.monthlySearchVolumes : [];
       let sparkline = monthlyVolumes.map(m => Number(m.monthlySearches) || 0);
       if (sparkline.length === 0) {
@@ -93,7 +63,7 @@ async function researchKeywords(req, res) {
         volume,
         competition,
         cpc,
-        averageCpc: typeof item.averageCpc === 'number' ? item.averageCpc : cpc,
+        averageCpc,
         opportunity,
         sparkline,
         trend,
@@ -115,7 +85,13 @@ async function researchKeywords(req, res) {
       }
     });
   } catch (err) {
-    // Sanitize error message — NEVER return or log secrets or tokens
+    if (err.statusCode === 429 || err.isDailyLimit || (err.message && err.message.includes('Daily limit reached'))) {
+      return res.status(429).json({
+        success: false,
+        error: 'Daily limit reached, try again tomorrow'
+      });
+    }
+
     const errMsg = err.response?.data?.error?.message || err.message || 'Failed to fetch keyword data from Google Ads API.';
     console.error('[KeywordResearchController] Google Ads API error:', errMsg);
 
@@ -127,4 +103,3 @@ async function researchKeywords(req, res) {
 }
 
 module.exports = { researchKeywords };
-

@@ -105,7 +105,7 @@ export default function KeywordResearchPage() {
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-1">Bulk Keyword Research</h1>
         <p className="text-sm text-slate-500">
-          Enter up to 500 keywords to get volume, trends, and opportunity scores.
+          Enter up to 3000 keywords to get volume, trends, and opportunity scores.
         </p>
       </div>
 

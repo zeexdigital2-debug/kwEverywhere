@@ -1,64 +1,113 @@
-const { getAlphabetSuggestions, getQuestionSuggestions, getAutocompleteSuggestions } = require('../services/googleAutocomplete');
-const { analyzeKeywords } = require('../services/trendEngine');
-const { extractKeywordsFromUrl, extractDomain } = require('../services/urlScraper');
+const { generateKeywordIdeas } = require('../services/googleAdsService');
+const {
+  calculateOpportunityScore,
+  calculateTrendDirection,
+  normalizeCompetition
+} = require('../utils/keywordMetricsHelper');
 
+const MULTI_KEYWORD_ERROR =
+  'Keywords Finder works with one keyword at a time. Enter a single keyword to get related ideas. To check data for your own list of keywords, use Keyword Research.';
+
+/**
+ * POST /api/keywords-finder
+ * Body: { seed?: string, keyword?: string, query?: string, country?: string }
+ */
 async function findKeywords(req, res) {
   try {
-    const { seed, url, domain, type = 'seed' } = req.body;
+    const { seed, keyword, query, keywords, country } = req.body || {};
 
-    let rawKeywords = [];
-    let sourceInfo = {};
-
-    if (type === 'url' && url) {
-      // Extract from competitor URL
-      const scraped = await extractKeywordsFromUrl(url);
-      rawKeywords = scraped.keywords;
-      sourceInfo = { method: 'url_scrape', source: url, success: scraped.success };
-
-      // Also fetch autocomplete for each scraped keyword (top 5)
-      if (scraped.success && scraped.keywords.length > 0) {
-        const topKws = scraped.keywords.slice(0, 5);
-        const acResults = await Promise.allSettled(
-          topKws.map(k => getAutocompleteSuggestions(k))
-        );
-        acResults.forEach(r => {
-          if (r.status === 'fulfilled') rawKeywords.push(...r.value);
-        });
-      }
-    } else if (type === 'domain' && domain) {
-      // Treat domain as a seed + fetch autocomplete
-      const cleanDomain = extractDomain(domain).replace(/\.(com|net|org|io|co|edu)$/, '').replace(/-/g, ' ');
-      rawKeywords = await getAlphabetSuggestions(cleanDomain);
-      sourceInfo = { method: 'domain', source: domain };
-    } else if (seed) {
-      // Standard seed keyword approach — alphabet soup + questions
-      const [alphabetKws, questionKws] = await Promise.all([
-        getAlphabetSuggestions(seed),
-        getQuestionSuggestions(seed)
-      ]);
-      rawKeywords = [...alphabetKws, ...questionKws];
-      sourceInfo = { method: 'seed', source: seed };
-    } else {
-      return res.status(400).json({ error: 'Provide a seed keyword, URL, or domain.' });
+    // Check if user passed array with more than 1 keyword
+    if (Array.isArray(keywords) && keywords.length > 1) {
+      return res.status(400).json({
+        success: false,
+        error: MULTI_KEYWORD_ERROR
+      });
     }
 
-    // Deduplicate, clean, limit
-    const unique = [...new Set(rawKeywords.map(k => k.trim().toLowerCase()).filter(k => k.length > 2))].slice(0, 200);
+    const rawInput = seed ?? keyword ?? query ?? (Array.isArray(keywords) ? keywords[0] : keywords);
 
-    // Analyze with trend engine
-    const results = analyzeKeywords(unique);
-    results.sort((a, b) => b.volume - a.volume);
+    if (!rawInput || typeof rawInput !== 'string' || !rawInput.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide a seed keyword to get related ideas.'
+      });
+    }
+
+    const trimmed = rawInput.trim();
+
+    // Enforce single-keyword rule: if comma or newline is present, reject immediately without calling Google
+    if (trimmed.includes(',') || trimmed.includes('\n') || trimmed.includes('\r')) {
+      return res.status(400).json({
+        success: false,
+        error: MULTI_KEYWORD_ERROR
+      });
+    }
+
+    // Call Google Ads generateKeywordIdeas (cached 24h, default 200 results, volume descending)
+    const googleResults = await generateKeywordIdeas(trimmed, {
+      country: country || 'US',
+      limit: 200
+    });
+
+    // Map Google Ads results to frontend expected shape
+    const mappedResults = googleResults.map((item) => {
+      const kw = item.text || '';
+      const volume = typeof item.avgMonthlySearches === 'number' ? item.avgMonthlySearches : 0;
+      const competition = normalizeCompetition(item.competition);
+      const cpc = typeof item.cpc === 'number' ? item.cpc : 0;
+      const averageCpc = typeof item.averageCpc === 'number' ? item.averageCpc : cpc;
+      const opportunity = calculateOpportunityScore(kw, volume, competition);
+
+      const monthlyVolumes = Array.isArray(item.monthlySearchVolumes) ? item.monthlySearchVolumes : [];
+      let sparkline = monthlyVolumes.map(m => Number(m.monthlySearches) || 0);
+      if (sparkline.length === 0) {
+        sparkline = Array(12).fill(volume);
+      }
+
+      const trend = calculateTrendDirection(sparkline);
+
+      return {
+        keyword: kw,
+        volume,
+        competition,
+        cpc,
+        averageCpc,
+        opportunity,
+        sparkline,
+        trend,
+        currency: 'USD',
+        cpcRange: item.cpcRange || { low: cpc, high: cpc },
+        monthlySearchVolumes: monthlyVolumes
+      };
+    });
 
     return res.json({
       success: true,
-      count: results.length,
-      results,
-      sourceInfo,
-      meta: { processedAt: new Date().toISOString() }
+      count: mappedResults.length,
+      results: mappedResults,
+      meta: {
+        seed: trimmed,
+        country: country || 'US',
+        currency: 'USD',
+        source: 'Google Ads API',
+        processedAt: new Date().toISOString()
+      }
     });
   } catch (err) {
-    console.error('[keywordsFinder] Error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    if (err.statusCode === 429 || err.isDailyLimit || (err.message && err.message.includes('Daily limit reached'))) {
+      return res.status(429).json({
+        success: false,
+        error: 'Daily limit reached, try again tomorrow'
+      });
+    }
+
+    const errMsg = err.response?.data?.error?.message || err.message || 'Failed to find keyword ideas from Google Ads API.';
+    console.error('[KeywordsFinderController] Google Ads API error:', errMsg);
+
+    return res.status(502).json({
+      success: false,
+      error: errMsg
+    });
   }
 }
 

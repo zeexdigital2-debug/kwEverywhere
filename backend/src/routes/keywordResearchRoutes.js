@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { researchKeywords } = require('../controllers/keywordResearchController');
-const { researchLimiter } = require('../middleware/rateLimiter');
-const creditMiddleware = require('../middleware/creditMiddleware');
+const { safetyLimiter } = require('../middleware/safetyLimiter');
 
-// Base cost is 1 credit per bulk request
-router.post('/', researchLimiter, creditMiddleware(1), researchKeywords);
+// Rate limited per IP (10 searches/min, 20,000 keywords/day), no login/credit requirement
+router.post('/', safetyLimiter({ isResearch: true }), researchKeywords);
 
 module.exports = router;

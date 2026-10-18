@@ -73,8 +73,8 @@ app.get('/api/health', (req, res) => {
 // Protected API Routes
 app.use('/api/user', authMiddleware, userRoutes);
 app.use('/api/history', authMiddleware, historyRoutes);
-app.use('/api/keyword-research', authMiddleware, keywordResearchRoutes);
-app.use('/api/keywords-finder', authMiddleware, keywordsFinderRoutes);
+app.use('/api/keyword-research', keywordResearchRoutes);
+app.use('/api/keywords-finder', keywordsFinderRoutes);
 app.use('/api/local-keywords', authMiddleware, localKeywordsRoutes);
 app.use('/api/domain-metrics', authMiddleware, domainMetricsRoutes);
 
