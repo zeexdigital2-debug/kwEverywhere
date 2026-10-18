@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { supabase } from './supabase';
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
 const API_BASE = rawApiUrl
@@ -13,24 +12,16 @@ const api = axios.create({
   }
 });
 
-// Interceptor to attach Supabase JWT token if user is logged in
-api.interceptors.request.use(async (config) => {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.access_token) {
-    config.headers.Authorization = `Bearer ${session.access_token}`;
-  } else {
-    // Guest mode fallback — could use a local UUID to persist guest state
-    let guestId = null;
-    if (typeof window !== 'undefined') {
-      guestId = localStorage.getItem('kws_guest_id');
-      if (!guestId) {
-        guestId = 'guest_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('kws_guest_id', guestId);
-      }
+// No login required — all tools are free and open.
+// We still send a guest ID so the backend can rate-limit per session if needed.
+api.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    let guestId = localStorage.getItem('kws_guest_id');
+    if (!guestId) {
+      guestId = 'guest_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('kws_guest_id', guestId);
     }
-    if (guestId) {
-      config.headers.Authorization = `Bearer ${guestId}`;
-    }
+    config.headers.Authorization = `Bearer ${guestId}`;
   }
   return config;
 });

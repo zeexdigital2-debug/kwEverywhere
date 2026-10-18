@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Search, Camera, ShieldOff, LogOut } from 'lucide-react';
+import { LayoutDashboard, Search, Camera, ShieldOff } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const navigation = [
@@ -55,8 +55,8 @@ export function Sidebar() {
         </nav>
       </div>
 
-      {/* Account / Plan Status Box */}
-      <div className="p-3 mx-3 mb-2 bg-gradient-to-r from-blue-50/70 to-indigo-50/50 rounded-xl border border-blue-100 text-xs">
+      {/* Free Plan Badge */}
+      <div className="p-3 mx-3 mb-4 bg-gradient-to-r from-blue-50/70 to-indigo-50/50 rounded-xl border border-blue-100 text-xs">
         <div className="flex items-center justify-between mb-1">
           <span className="font-semibold text-slate-800">Free Tier</span>
           <span className="px-1.5 py-0.2 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200">
@@ -64,15 +64,8 @@ export function Sidebar() {
           </span>
         </div>
         <p className="text-[11px] text-slate-500 leading-tight">
-          Unlimited queries · No credit card required
+          Unlimited queries · No login required
         </p>
-      </div>
-      
-      <div className="flex-shrink-0 p-3 border-t border-slate-100">
-        <button className="flex w-full items-center px-3.5 py-2 text-sm font-medium text-slate-500 rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-colors">
-          <LogOut className="mr-3 h-4.5 w-4.5" />
-          Sign Out
-        </button>
       </div>
     </aside>
   );

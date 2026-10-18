@@ -79,12 +79,6 @@ export default function SiteHeader() {
         {/* Action Buttons */}
         <div className="hidden md:flex items-center space-x-3">
           <Link
-            href="/login"
-            className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-white border border-[#0a192f]/30 rounded-lg hover:bg-[#0a192f] hover:border-[#0a192f] transition-all"
-          >
-            Sign in
-          </Link>
-          <Link
             href="/dashboard/keyword-research"
             className="px-4 py-2 text-sm font-medium text-white bg-[#0a192f] hover:bg-[#112240] rounded-lg shadow-sm hover:shadow-md transition-all flex items-center space-x-2"
           >
@@ -134,12 +128,6 @@ export default function SiteHeader() {
             Dashboard
           </Link>
           <div className="pt-2 flex flex-col gap-2">
-            <Link
-              href="/login"
-              className="w-full text-center py-2 text-sm font-medium text-slate-700 border border-[#0a192f]/30 rounded-lg hover:bg-[#0a192f] hover:text-white"
-            >
-              Sign in
-            </Link>
             <Link
               href="/dashboard/keyword-research"
               className="w-full text-center py-2 text-sm font-medium text-white bg-[#0a192f] hover:bg-[#112240] rounded-lg"
