@@ -1,6 +1,7 @@
 // In-memory rate & quota tracker for IP and safety limits
-// Per-IP: 10 searches per minute, 20,000 keywords per day
+// Per-IP: 10 searches per minute, 30,000 keywords per day
 
+const DAILY_KEYWORD_LIMIT_PER_IP = 30000;
 const ipMinuteRequests = new Map();
 const ipDailyKeywords = new Map();
 
@@ -31,7 +32,7 @@ function safetyLimiter(options = {}) {
       });
     }
 
-    // 2. Daily keywords limit: 20,000 keywords per day per IP
+    // 2. Daily keywords limit: 30,000 keywords per day per IP
     let dailyRecord = ipDailyKeywords.get(ip);
     const ONE_DAY_MS = 24 * 60 * 60 * 1000;
     if (!dailyRecord || now > dailyRecord.resetAt) {
@@ -49,10 +50,10 @@ function safetyLimiter(options = {}) {
       kwCount = Math.max(1, list.filter(k => String(k || '').trim().length > 0).length);
     }
 
-    if (dailyRecord.count + kwCount > 20000) {
+    if (dailyRecord.count + kwCount > DAILY_KEYWORD_LIMIT_PER_IP) {
       return res.status(429).json({
         success: false,
-        error: 'Daily limit reached: Maximum 20,000 keywords per day. Please try again tomorrow.'
+        error: 'Daily limit reached: Maximum 30,000 keywords per day. Please try again tomorrow.'
       });
     }
 
@@ -75,4 +76,4 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000).unref();
 
-module.exports = { safetyLimiter, getClientIp };
+module.exports = { safetyLimiter, getClientIp, DAILY_KEYWORD_LIMIT_PER_IP };
