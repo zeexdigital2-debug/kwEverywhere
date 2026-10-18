@@ -26,6 +26,12 @@ export function DataTable({ columns, data, filename = "export.csv" }) {
     const rows = sortedData.map(row => 
       columns.map(c => {
         let val = row[c.key];
+        const vol = Number(row.volume) || 0;
+        // If volume is 0 or null, leave competition, cpc, opportunity, and sparkline empty in CSV
+        if (vol <= 0 && ['competition', 'cpc', 'opportunity', 'sparkline'].includes(c.key)) {
+          return '""';
+        }
+        if (val === null || val === undefined) val = '';
         if (Array.isArray(val)) val = val.join('|');
         return `"${String(val).replace(/"/g, '""')}"`;
       }).join(',')

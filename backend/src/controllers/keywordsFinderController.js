@@ -53,18 +53,19 @@ async function findKeywords(req, res) {
     const mappedResults = googleResults.map((item) => {
       const kw = item.text || '';
       const volume = typeof item.avgMonthlySearches === 'number' ? item.avgMonthlySearches : 0;
-      const competition = normalizeCompetition(item.competition);
-      const cpc = typeof item.cpc === 'number' ? item.cpc : 0;
-      const averageCpc = typeof item.averageCpc === 'number' ? item.averageCpc : cpc;
-      const opportunity = calculateOpportunityScore(kw, volume, competition);
+      const hasData = volume > 0;
+      const competition = hasData ? normalizeCompetition(item.competition) : 'unspecified';
+      const cpc = hasData && typeof item.cpc === 'number' ? item.cpc : 0;
+      const averageCpc = hasData && typeof item.averageCpc === 'number' ? item.averageCpc : cpc;
+      const opportunity = hasData ? calculateOpportunityScore(kw, volume, competition) : 0;
 
       const monthlyVolumes = Array.isArray(item.monthlySearchVolumes) ? item.monthlySearchVolumes : [];
-      let sparkline = monthlyVolumes.map(m => Number(m.monthlySearches) || 0);
-      if (sparkline.length === 0) {
+      let sparkline = hasData ? monthlyVolumes.map(m => Number(m.monthlySearches) || 0) : [];
+      if (hasData && sparkline.length === 0) {
         sparkline = Array(12).fill(volume);
       }
 
-      const trend = calculateTrendDirection(sparkline);
+      const trend = hasData ? calculateTrendDirection(sparkline) : 'none';
 
       return {
         keyword: kw,

@@ -94,45 +94,69 @@ export default function KeywordsFinderPage() {
     {
       key: 'volume',
       label: 'Volume',
-      render: (val) => (typeof val === 'number' ? val.toLocaleString() : val)
+      render: (val) => (typeof val === 'number' ? val.toLocaleString() : (val ?? 0))
     },
     {
       key: 'competition',
       label: 'Competition',
-      render: (val) => (
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-          val === 'low' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-          val === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-          'bg-rose-50 text-rose-700 border-rose-200'
-        }`}>
-          {String(val || 'medium').charAt(0).toUpperCase() + String(val || 'medium').slice(1)}
-        </span>
-      )
+      render: (val, row) => {
+        const vol = Number(row?.volume) || 0;
+        if (vol <= 0 || !val || val === 'unspecified') {
+          return <span className="text-slate-400 font-medium">—</span>;
+        }
+        return (
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+            val === 'low' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+            val === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+            'bg-rose-50 text-rose-700 border-rose-200'
+          }`}>
+            {String(val || 'medium').charAt(0).toUpperCase() + String(val || 'medium').slice(1)}
+          </span>
+        );
+      }
     },
     {
       key: 'cpc',
       label: 'Est. CPC',
-      render: (val) => `$${Number(val || 0).toFixed(2)}`
+      render: (val, row) => {
+        const vol = Number(row?.volume) || 0;
+        if (vol <= 0 || !val || Number(val) <= 0) {
+          return <span className="text-slate-400 font-medium">—</span>;
+        }
+        return `$${Number(val).toFixed(2)}`;
+      }
     },
     {
       key: 'opportunity',
       label: 'Opportunity Score',
-      render: (val) => (
-        <div className="flex items-center space-x-2">
-          <div className="w-full bg-slate-100 rounded-full h-2 max-w-[100px] border border-slate-200 overflow-hidden">
-            <div
-              className={`h-2 rounded-full ${val > 70 ? 'bg-emerald-500' : val > 40 ? 'bg-amber-500' : 'bg-rose-500'}`}
-              style={{ width: `${Math.min(100, Math.max(0, val))}%` }}
-            />
+      render: (val, row) => {
+        const vol = Number(row?.volume) || 0;
+        if (vol <= 0 || !val || Number(val) <= 0) {
+          return <span className="text-slate-400 font-medium">—</span>;
+        }
+        return (
+          <div className="flex items-center space-x-2">
+            <div className="w-full bg-slate-100 rounded-full h-2 max-w-[100px] border border-slate-200 overflow-hidden">
+              <div
+                className={`h-2 rounded-full ${val > 70 ? 'bg-emerald-500' : val > 40 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                style={{ width: `${Math.min(100, Math.max(0, val))}%` }}
+              />
+            </div>
+            <span className="text-xs text-slate-500 font-mono font-medium">{val}/100</span>
           </div>
-          <span className="text-xs text-slate-500 font-mono font-medium">{val}/100</span>
-        </div>
-      )
+        );
+      }
     },
     {
       key: 'sparkline',
       label: '12m Trend',
-      render: (val, row) => <SparklineChart data={val} trend={row.trend} />
+      render: (val, row) => {
+        const vol = Number(row?.volume) || 0;
+        if (vol <= 0 || !val || val.length === 0 || val.every(v => v === 0)) {
+          return <span className="text-slate-400 font-medium">—</span>;
+        }
+        return <SparklineChart data={val} trend={row.trend} />;
+      }
     }
   ];
 
