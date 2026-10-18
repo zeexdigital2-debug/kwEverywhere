@@ -235,26 +235,16 @@ export default function LandingPage() {
           {/* Action Buttons */}
           <div className="hidden md:flex items-center space-x-3">
             <Link
-              href="/login"
-              className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-white border border-[#0a192f]/30 rounded-lg hover:bg-[#0a192f] hover:border-[#0a192f] transition-all"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/dashboard"
+              href="/dashboard/keyword-research"
               className="px-4 py-2 text-sm font-medium text-white bg-[#0a192f] hover:bg-[#112240] rounded-lg shadow-sm hover:shadow-md transition-all flex items-center space-x-2"
             >
-              <span className="flex items-center space-x-1">
-                {/* Chrome Icon SVG */}
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" fill="#fff" />
-                  <path d="M12 2a10 10 0 0 1 8.66 5H12a5 5 0 0 0-4.33 2.5L3.34 7A10 10 0 0 1 12 2z" fill="#EA4335" />
-                  <path d="M3.34 7l4.33 2.5A5 5 0 0 0 7.67 14.5L3.34 17A10 10 0 0 1 3.34 7z" fill="#FBBC05" />
-                  <path d="M12 22a10 10 0 0 1-8.66-5l4.33-2.5A5 5 0 0 0 12 17h8.66A10 10 0 0 1 12 22z" fill="#34A853" />
-                  <circle cx="12" cy="12" r="4" fill="#4285F4" />
-                </svg>
-              </span>
-              <span>Get Extension</span>
+              <svg className="w-4 h-4 text-[#38bdf8]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16.5" y2="16.5" />
+                <line x1="8" y1="11" x2="14" y2="11" />
+                <line x1="11" y1="8" x2="11" y2="14" />
+              </svg>
+              <span>Keyword Research</span>
             </Link>
           </div>
 
@@ -295,16 +285,10 @@ export default function LandingPage() {
             </Link>
             <div className="pt-2 flex flex-col gap-2">
               <Link
-                href="/login"
-                className="w-full text-center py-2 text-sm font-medium text-slate-700 border border-[#0a192f]/30 rounded-lg hover:bg-[#0a192f] hover:text-white"
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/signup"
+                href="/dashboard/keyword-research"
                 className="w-full text-center py-2 text-sm font-medium text-white bg-[#0a192f] hover:bg-[#112240] rounded-lg"
               >
-                Get Extension
+                Keyword Research
               </Link>
             </div>
           </div>
@@ -1221,8 +1205,7 @@ export default function LandingPage() {
             <ul className="space-y-2 text-xs">
               <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
               <li><a href="#faq" className="hover:text-white transition-colors">FAQ</a></li>
-              <li><Link href="/signup" className="hover:text-white transition-colors">Sign up</Link></li>
-              <li><Link href="/login" className="hover:text-white transition-colors">Sign in</Link></li>
+              <li><Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link></li>
             </ul>
           </div>
 
