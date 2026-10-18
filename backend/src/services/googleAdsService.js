@@ -277,16 +277,26 @@ async function generateKeywordIdeas(keywordInput, options = {}) {
 
       // CPC conversion:
       // Google Ads account currency is PKR.
-      // Divide micros by 1,000,000 to get PKR, then multiply by usdPerPkr to convert to USD (rounded to 2 decimals).
-      const rawLowMicros = Number(metrics.lowTopOfPageBidMicros) || 0;
-      const rawHighMicros = Number(metrics.highTopOfPageBidMicros) || 0;
+      // Convert averageCpcMicros (PKR) to USD using usdPerPkr.
+      // lowTopOfPageBidMicros and highTopOfPageBidMicros remain as cpcRange (low / high).
+      const rawAvgCpcMicros = Number(metrics.averageCpcMicros ?? metrics.average_cpc_micros ?? metrics.avgCpcMicros) || 0;
+      const rawLowMicros = Number(metrics.lowTopOfPageBidMicros ?? metrics.low_top_of_page_bid_micros) || 0;
+      const rawHighMicros = Number(metrics.highTopOfPageBidMicros ?? metrics.high_top_of_page_bid_micros) || 0;
 
+      const avgPkr = rawAvgCpcMicros > 0 ? (rawAvgCpcMicros / 1000000) : 0;
       const lowPkr = rawLowMicros > 0 ? (rawLowMicros / 1000000) : 0;
       const highPkr = rawHighMicros > 0 ? (rawHighMicros / 1000000) : 0;
 
+      const avgCpc = avgPkr > 0 ? Number((avgPkr * usdPerPkr).toFixed(2)) : 0;
       const lowCpc = lowPkr > 0 ? Number((lowPkr * usdPerPkr).toFixed(2)) : 0;
       const highCpc = highPkr > 0 ? Number((highPkr * usdPerPkr).toFixed(2)) : 0;
-      const cpc = highCpc > 0 ? highCpc : lowCpc;
+
+      // Use averageCpc as primary cpc value (USD) instead of highTopOfPageBid
+      const cpc = avgCpc > 0
+        ? avgCpc
+        : (lowCpc > 0 && highCpc > 0
+            ? Number(((lowCpc + highCpc) / 2).toFixed(2))
+            : (lowCpc || highCpc || 0));
 
       // Monthly Search Volumes (12 months trend)
       const monthlySearchVolumes = (metrics.monthlySearchVolumes || []).map((m) => ({
@@ -300,6 +310,7 @@ async function generateKeywordIdeas(keywordInput, options = {}) {
         avgMonthlySearches,
         competition,
         cpc,
+        averageCpc: avgCpc,
         cpcRange: {
           low: lowCpc,
           high: highCpc

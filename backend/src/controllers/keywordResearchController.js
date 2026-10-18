@@ -93,6 +93,7 @@ async function researchKeywords(req, res) {
         volume,
         competition,
         cpc,
+        averageCpc: typeof item.averageCpc === 'number' ? item.averageCpc : cpc,
         opportunity,
         sparkline,
         trend,
