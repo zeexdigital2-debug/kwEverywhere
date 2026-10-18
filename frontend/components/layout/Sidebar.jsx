@@ -65,7 +65,7 @@ export function Sidebar() {
           </span>
         </div>
         <p className="text-[11px] text-slate-500 leading-tight">
-          Unlimited queries · No login required
+          Free to use · No login required
         </p>
       </div>
     </aside>

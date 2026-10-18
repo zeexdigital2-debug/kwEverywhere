@@ -103,7 +103,7 @@ export default function LocalKeywordsPage() {
     { key: 'volume', label: 'Local Volume' },
     {
       key: 'competition',
-      label: 'Difficulty',
+      label: 'Competition',
       render: (val) => (
         <span className={`capitalize px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
           val === 'low' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :

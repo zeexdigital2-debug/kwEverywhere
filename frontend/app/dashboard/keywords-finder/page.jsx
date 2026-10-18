@@ -41,6 +41,7 @@ export default function KeywordsFinderPage() {
     // Live validation: check if user typed or pasted comma or new line
     if (val.includes(',') || val.includes('\n') || val.includes('\r')) {
       setWarning(MULTI_KEYWORD_WARNING);
+      setResults(null);
     } else {
       setWarning('');
     }
@@ -53,6 +54,7 @@ export default function KeywordsFinderPage() {
     // Strict single-keyword check: do NOT call Google Ads API if multiple keywords entered
     if (trimmed.includes(',') || trimmed.includes('\n') || trimmed.includes('\r')) {
       setWarning(MULTI_KEYWORD_WARNING);
+      setResults(null);
       return;
     }
 
@@ -96,7 +98,7 @@ export default function KeywordsFinderPage() {
     },
     {
       key: 'competition',
-      label: 'Difficulty',
+      label: 'Competition',
       render: (val) => (
         <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
           val === 'low' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :

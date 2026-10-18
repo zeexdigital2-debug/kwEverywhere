@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { X, Megaphone } from 'lucide-react';
 
 const ANNOUNCEMENT = {
-  id: 'ann-001',
-  message: '🎉 KWEveryWhere is 100% Free — Unlimited keyword research, domain metrics, and local SEO tools with no credit card required!',
+  id: 'ann-002',
+  message: '🎉 KWEveryWhere is 100% Free — Free keyword research, domain metrics, and local SEO tools with no credit card required!',
   linkUrl: '/dashboard',
   linkText: 'Start Free →',
 };

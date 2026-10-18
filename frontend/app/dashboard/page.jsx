@@ -5,7 +5,7 @@ import { Search, Lightbulb, Camera, ShieldOff, ArrowRight } from 'lucide-react';
 const tools = [
   { 
     name: 'Keyword Research', 
-    desc: 'Analyze bulk keywords for exact search volumes, trends, and difficulty across 15+ countries.', 
+    desc: 'Analyze bulk keywords for exact search volumes, trends, and competition across 15+ countries.', 
     icon: Search, 
     href: '/dashboard/keyword-research',
     color: 'from-blue-400 to-blue-600'

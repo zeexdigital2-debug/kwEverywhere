@@ -66,7 +66,7 @@ export default function KeywordResearchPage() {
     { key: 'volume', label: 'Volume' },
     { 
       key: 'competition', 
-      label: 'Difficulty',
+      label: 'Competition',
       render: (val) => (
         <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
           val === 'low' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
@@ -145,7 +145,7 @@ export default function KeywordResearchPage() {
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
           <p className="text-xs text-emerald-600 font-semibold">
-            ✓ 100% Free · Unlimited Bulk Keywords · {COUNTRIES.length}+ Countries
+            ✓ 100% Free · Up to 3000 Keywords per Search · {COUNTRIES.length}+ Countries
           </p>
           <button
             onClick={handleAnalyze}
