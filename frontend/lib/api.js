@@ -38,8 +38,8 @@ api.interceptors.request.use(async (config) => {
 export const seoApi = {
   getCredits: () => api.get('/user/credits').then(res => res.data),
   
-  researchKeywords: (keywords) => 
-    api.post('/keyword-research', { keywords }).then(res => res.data),
+  researchKeywords: (keywords, country = 'US') => 
+    api.post('/keyword-research', { keywords, country }).then(res => res.data),
     
   findKeywords: (payload) => // { seed, url, domain, type }
     api.post('/keywords-finder', payload).then(res => res.data),

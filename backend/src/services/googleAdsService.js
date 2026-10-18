@@ -119,28 +119,89 @@ async function getAccessToken() {
   }
 }
 
+// Country code to Google Ads geoTargetConstants ID lookup
+const GEO_TARGET_LOOKUP = {
+  US: '2840', // United States
+  GB: '2826', // United Kingdom
+  UK: '2826', // United Kingdom (alias)
+  PK: '2586', // Pakistan
+  QA: '2634', // Qatar
+  AE: '2784', // UAE
+  SA: '2682', // Saudi Arabia
+  IN: '2356', // India
+  CA: '2124', // Canada
+  AU: '2036', // Australia
+  DE: '2276', // Germany
+  FR: '2250', // France
+  ES: '2724', // Spain
+  BR: '2076', // Brazil
+  MX: '2484', // Mexico
+  SG: '2702', // Singapore
+  ZA: '2710', // South Africa
+  IT: '2380', // Italy
+  NL: '2528', // Netherlands
+  JP: '2392', // Japan
+  TR: '2792', // Turkey
+  ID: '2360', // Indonesia
+  MY: '2458', // Malaysia
+  PH: '2608', // Philippines
+  BD: '2050', // Bangladesh
+  EG: '2818', // Egypt
+  NG: '2566', // Nigeria
+  KE: '2404', // Kenya
+  NZ: '2554', // New Zealand
+  IE: '2372'  // Ireland
+};
+
 /**
- * Generate keyword ideas from Google Ads API v24 for a given keyword.
- * Results are cached for 24 hours.
+ * Resolve country code or ID string to a Google Ads geoTargetConstants ID.
+ * Defaults to '2840' (United States).
+ */
+function resolveGeoTargetId(countryOrGeo) {
+  if (!countryOrGeo) return '2840';
+  const str = String(countryOrGeo).trim();
+  if (/^\d+$/.test(str)) return str;
+  if (str.startsWith('geoTargetConstants/')) return str.replace('geoTargetConstants/', '');
+  return GEO_TARGET_LOOKUP[str.toUpperCase()] || '2840';
+}
+
+/**
+ * Generate keyword ideas from Google Ads API v24 for a keyword or list of keywords.
+ * Results are cached in-memory for 24 hours.
  *
- * @param {string} keyword
+ * @param {string|string[]} keywordInput One or more keywords
  * @param {Object} [options]
+ * @param {string} [options.country='US'] Country code (US, PK, GB, etc.) or geo numeric ID
+ * @param {string} [options.language='languageConstants/1000'] Google Ads language constant (default: 1000 for English)
  * @param {number} [options.limit=50] Limit returned results (max 200, default 50)
  * @returns {Promise<Array>} List of keyword ideas with volume, competition, cpc in USD, and 12-month trend
  */
-async function generateKeywordIdeas(keyword, options = {}) {
-  if (!keyword || typeof keyword !== 'string') {
-    throw new Error('A valid keyword string is required.');
+async function generateKeywordIdeas(keywordInput, options = {}) {
+  // Normalize keywordInput to non-empty string array
+  const rawKeywords = Array.isArray(keywordInput)
+    ? keywordInput
+    : (typeof keywordInput === 'string' ? keywordInput.split(/[\n,]+/) : []);
+
+  const keywordsList = [...new Set(
+    rawKeywords
+      .map(k => String(k || '').trim())
+      .filter(k => k.length > 0)
+  )];
+
+  if (keywordsList.length === 0) {
+    throw new Error('A valid keyword string or array of keywords is required.');
   }
 
   // Parse limit: default 50, min 1, max 200
   const limit = Math.min(200, Math.max(1, Number(options.limit) || 50));
 
-  const cleanKw = keyword.trim();
-  const cacheKey = cleanKw.toLowerCase();
-  const now = Date.now();
+  // Resolve Geo Target & Language
+  const geoId = resolveGeoTargetId(options.country || options.geoId || options.geoTargetConstant || 'US');
+  const language = options.language || 'languageConstants/1000';
 
-  // 1. Check 24-hour cache (return sliced copy by requested limit)
+  // 1. Check 24-hour cache
+  const cacheKey = `${keywordsList.map(k => k.toLowerCase()).sort().join('|')}::${geoId}::${language}`;
+  const now = Date.now();
   const cached = keywordCache.get(cacheKey);
   if (cached && now < cached.expiresAt) {
     return cached.data.slice(0, limit);
@@ -160,30 +221,52 @@ async function generateKeywordIdeas(keyword, options = {}) {
 
   const endpoint = `https://googleads.googleapis.com/v24/customers/${customerId}:generateKeywordIdeas`;
 
-  const requestBody = {
-    keywordSeed: {
-      keywords: [cleanKw]
-    },
-    geoTargetConstants: ['geoTargetConstants/2840'], // United States (default)
-    language: 'languageConstants/1000', // English
-    keywordPlanNetwork: 'GOOGLE_SEARCH'
-  };
+  // 4. Batch keywords in chunks of up to 20 (Google Ads API max seeds per request)
+  const chunks = [];
+  for (let i = 0; i < keywordsList.length; i += 20) {
+    chunks.push(keywordsList.slice(i, i + 20));
+  }
 
   try {
-    const response = await axios.post(endpoint, requestBody, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-        // developer-token header intentionally omitted as specified
-      },
-      timeout: 15000
-    });
+    const allRawResults = [];
 
-    const rawResults = response.data?.results || [];
+    for (const chunk of chunks) {
+      const requestBody = {
+        keywordSeed: {
+          keywords: chunk
+        },
+        geoTargetConstants: [`geoTargetConstants/${geoId}`],
+        language,
+        keywordPlanNetwork: 'GOOGLE_SEARCH'
+      };
 
-    // 4. Format response: text, avgMonthlySearches, competition, CPC (converted to USD), currency, monthlySearchVolumes
-    const formatted = rawResults.map((item) => {
-      const text = item.text || cleanKw;
+      const response = await axios.post(endpoint, requestBody, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000
+      });
+
+      const batch = response.data?.results || [];
+      allRawResults.push(...batch);
+    }
+
+    // Deduplicate merged results by lowercase keyword text
+    const seenKw = new Set();
+    const uniqueRawResults = [];
+    for (const item of allRawResults) {
+      const kwText = (item.text || '').trim();
+      const lower = kwText.toLowerCase();
+      if (kwText && !seenKw.has(lower)) {
+        seenKw.add(lower);
+        uniqueRawResults.push(item);
+      }
+    }
+
+    // 5. Format response: text, avgMonthlySearches, competition, CPC (converted to USD), currency, monthlySearchVolumes
+    const formatted = uniqueRawResults.map((item) => {
+      const text = item.text || '';
       const metrics = item.keywordIdeaMetrics || {};
 
       // Average monthly searches
@@ -194,8 +277,7 @@ async function generateKeywordIdeas(keyword, options = {}) {
 
       // CPC conversion:
       // Google Ads account currency is PKR.
-      // lowTopOfPageBidMicros and highTopOfPageBidMicros divided by 1,000,000 gives PKR value.
-      // Multiply PKR value by usdPerPkr to convert to USD, rounded to 2 decimals.
+      // Divide micros by 1,000,000 to get PKR, then multiply by usdPerPkr to convert to USD (rounded to 2 decimals).
       const rawLowMicros = Number(metrics.lowTopOfPageBidMicros) || 0;
       const rawHighMicros = Number(metrics.highTopOfPageBidMicros) || 0;
 
@@ -230,7 +312,7 @@ async function generateKeywordIdeas(keyword, options = {}) {
     // Sort descending by avgMonthlySearches
     formatted.sort((a, b) => b.avgMonthlySearches - a.avgMonthlySearches);
 
-    // 5. Cache full sorted results for 24 hours
+    // 6. Cache full sorted results for 24 hours
     keywordCache.set(cacheKey, {
       data: formatted,
       expiresAt: now + CACHE_TTL_MS
@@ -249,5 +331,7 @@ async function generateKeywordIdeas(keyword, options = {}) {
 module.exports = {
   getAccessToken,
   getUsdPerPkr,
-  generateKeywordIdeas
+  generateKeywordIdeas,
+  resolveGeoTargetId,
+  GEO_TARGET_LOOKUP
 };
