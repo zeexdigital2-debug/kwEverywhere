@@ -16,5 +16,6 @@ module.exports = {
   GOOGLE_ADS_CLIENT_ID: process.env.GOOGLE_ADS_CLIENT_ID || '',
   GOOGLE_ADS_CLIENT_SECRET: process.env.GOOGLE_ADS_CLIENT_SECRET || '',
   GOOGLE_ADS_REFRESH_TOKEN: process.env.GOOGLE_ADS_REFRESH_TOKEN || '',
-  GOOGLE_ADS_CUSTOMER_ID: (process.env.GOOGLE_ADS_CUSTOMER_ID || '7500158188').replace(/[^0-9]/g, '')
+  GOOGLE_ADS_CUSTOMER_ID: (process.env.GOOGLE_ADS_CUSTOMER_ID || '7500158188').replace(/[^0-9]/g, ''),
+  USD_PKR_RATE: Number(process.env.USD_PKR_RATE) || 280
 };

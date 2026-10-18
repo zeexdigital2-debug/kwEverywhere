@@ -22,6 +22,7 @@ router.post('/generate-keyword-ideas', async (req, res) => {
 
     return res.json({
       success: true,
+      currency: 'USD',
       keyword: keyword.trim(),
       count: results.length,
       limit: results.length,
@@ -55,6 +56,7 @@ router.get('/generate-keyword-ideas', async (req, res) => {
 
     return res.json({
       success: true,
+      currency: 'USD',
       keyword: keyword.trim(),
       count: results.length,
       limit: results.length,

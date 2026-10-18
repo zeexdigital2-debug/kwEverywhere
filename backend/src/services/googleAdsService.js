@@ -5,9 +5,66 @@ const env = require('../config/env');
 const keywordCache = new Map();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+// Exchange rate cache for USD/PKR
+let fxCache = {
+  usdPerPkr: null,
+  expiresAt: 0,
+  lastValidRate: null
+};
+const FX_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 // OAuth access token state
 let cachedAccessToken = null;
 let accessTokenExpiresAt = 0;
+
+/**
+ * Fetch automatic USD per PKR exchange rate.
+ * - GET https://open.er-api.com/v6/latest/USD (free, no key required)
+ * - usdPerPkr = 1 / rates.PKR
+ * - In-memory 24-hour cache
+ * - Fallback: last valid cached rate, or env.USD_PKR_RATE (default 280)
+ *
+ * @returns {Promise<number>} usdPerPkr multiplier
+ */
+async function getUsdPerPkr() {
+  const now = Date.now();
+
+  // Return active cache if still valid
+  if (fxCache.usdPerPkr && now < fxCache.expiresAt) {
+    return fxCache.usdPerPkr;
+  }
+
+  const fallbackPkrRate = Number(env.USD_PKR_RATE) || 280;
+  const fallbackUsdPerPkr = 1 / fallbackPkrRate;
+
+  try {
+    const response = await axios.get('https://open.er-api.com/v6/latest/USD', {
+      timeout: 8000
+    });
+
+    const pkrRate = Number(response.data?.rates?.PKR);
+    if (pkrRate && pkrRate > 0) {
+      const calculatedRate = 1 / pkrRate;
+      fxCache = {
+        usdPerPkr: calculatedRate,
+        expiresAt: now + FX_CACHE_TTL_MS,
+        lastValidRate: calculatedRate
+      };
+      return calculatedRate;
+    }
+    throw new Error('PKR rate missing or invalid in exchange rate API response');
+  } catch (err) {
+    console.warn('[GoogleAdsService] Live exchange rate fetch failed, using fallback:', err.message);
+
+    // Fallback 1: previous valid cached rate
+    if (fxCache.lastValidRate) {
+      return fxCache.lastValidRate;
+    }
+
+    // Fallback 2: env.js USD_PKR_RATE (default 280)
+    return fallbackUsdPerPkr;
+  }
+}
 
 /**
  * Obtain a fresh Google OAuth2 access token using the refresh token.
@@ -67,10 +124,9 @@ async function getAccessToken() {
  * Results are cached for 24 hours.
  *
  * @param {string} keyword
- * @param {string} keyword
  * @param {Object} [options]
  * @param {number} [options.limit=50] Limit returned results (max 200, default 50)
- * @returns {Promise<Array>} List of keyword ideas with volume, competition, cpc, and 12-month trend
+ * @returns {Promise<Array>} List of keyword ideas with volume, competition, cpc in USD, and 12-month trend
  */
 async function generateKeywordIdeas(keyword, options = {}) {
   if (!keyword || typeof keyword !== 'string') {
@@ -90,8 +146,11 @@ async function generateKeywordIdeas(keyword, options = {}) {
     return cached.data.slice(0, limit);
   }
 
-  // 2. Obtain valid Access Token
-  const accessToken = await getAccessToken();
+  // 2. Obtain valid Access Token & USD/PKR Exchange Rate concurrently
+  const [accessToken, usdPerPkr] = await Promise.all([
+    getAccessToken(),
+    getUsdPerPkr()
+  ]);
 
   // 3. Prepare Customer ID & Endpoint
   const customerId = (env.GOOGLE_ADS_CUSTOMER_ID || '7500158188').replace(/[^0-9]/g, '');
@@ -122,7 +181,7 @@ async function generateKeywordIdeas(keyword, options = {}) {
 
     const rawResults = response.data?.results || [];
 
-    // 4. Format response: text, avgMonthlySearches, competition, CPC, monthlySearchVolumes
+    // 4. Format response: text, avgMonthlySearches, competition, CPC (converted to USD), currency, monthlySearchVolumes
     const formatted = rawResults.map((item) => {
       const text = item.text || cleanKw;
       const metrics = item.keywordIdeaMetrics || {};
@@ -133,12 +192,18 @@ async function generateKeywordIdeas(keyword, options = {}) {
       // Competition enum (LOW, MEDIUM, HIGH, etc.)
       const competition = metrics.competition || 'UNSPECIFIED';
 
-      // CPC in USD: lowTopOfPageBidMicros and highTopOfPageBidMicros divided strictly by 1,000,000 and rounded to 2 decimals
+      // CPC conversion:
+      // Google Ads account currency is PKR.
+      // lowTopOfPageBidMicros and highTopOfPageBidMicros divided by 1,000,000 gives PKR value.
+      // Multiply PKR value by usdPerPkr to convert to USD, rounded to 2 decimals.
       const rawLowMicros = Number(metrics.lowTopOfPageBidMicros) || 0;
       const rawHighMicros = Number(metrics.highTopOfPageBidMicros) || 0;
 
-      const lowCpc = rawLowMicros > 0 ? Number((rawLowMicros / 1000000).toFixed(2)) : 0;
-      const highCpc = rawHighMicros > 0 ? Number((rawHighMicros / 1000000).toFixed(2)) : 0;
+      const lowPkr = rawLowMicros > 0 ? (rawLowMicros / 1000000) : 0;
+      const highPkr = rawHighMicros > 0 ? (rawHighMicros / 1000000) : 0;
+
+      const lowCpc = lowPkr > 0 ? Number((lowPkr * usdPerPkr).toFixed(2)) : 0;
+      const highCpc = highPkr > 0 ? Number((highPkr * usdPerPkr).toFixed(2)) : 0;
       const cpc = highCpc > 0 ? highCpc : lowCpc;
 
       // Monthly Search Volumes (12 months trend)
@@ -157,6 +222,7 @@ async function generateKeywordIdeas(keyword, options = {}) {
           low: lowCpc,
           high: highCpc
         },
+        currency: 'USD',
         monthlySearchVolumes
       };
     });
@@ -182,5 +248,6 @@ async function generateKeywordIdeas(keyword, options = {}) {
 
 module.exports = {
   getAccessToken,
+  getUsdPerPkr,
   generateKeywordIdeas
 };
