@@ -347,7 +347,7 @@ export default function LandingPage() {
             </span>
             <span className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#0a192f] to-[#1e3a8a] text-white shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all">
               <span className="text-[#38bdf8]">⚡</span>
-              <span>Unlimited Bulk Queries</span>
+              <span>Up to 3000 Keywords per Search</span>
             </span>
           </div>
 

@@ -68,7 +68,7 @@ export default function DashboardOverview() {
 
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs">
           <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Bulk Capacity</span>
-          <div className="text-xl font-bold text-[#0a192f] mt-1">Unlimited</div>
+          <div className="text-xl font-bold text-[#0a192f] mt-1">Up to 3000 / search</div>
           <span className="text-[11px] text-slate-500">Instant CSV Exports</span>
         </div>
 
@@ -97,7 +97,7 @@ export default function DashboardOverview() {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
-            All keyword research, competitor gap analytics, and bulk domain metrics are unrestricted. Extract unlimited keyword opportunities anytime.
+            All keyword research, competitor gap analytics, and bulk domain metrics are free to use. Extract keyword opportunities anytime, up to 3000 keywords per search.
           </p>
         </div>
         <Link

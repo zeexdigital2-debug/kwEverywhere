@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { seoApi } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { SparklineChart } from '@/components/ui/SparklineChart';
-import { Search, Loader2, Globe } from 'lucide-react';
+import { Search, Loader2, Globe, X } from 'lucide-react';
 
 const COUNTRIES = [
   { code: 'US', name: 'United States', flag: '🇺🇸' },
@@ -29,6 +29,14 @@ export default function KeywordResearchPage() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [error, setError] = useState('');
+
+  const handleClear = () => {
+    setInput('');
+    setResults(null);
+    setError('');
+  };
+
+  const isClearDisabled = loading || (!input.trim() && !results && !error);
 
   const handleAnalyze = async () => {
     if (!input.trim()) return;
@@ -179,14 +187,25 @@ export default function KeywordResearchPage() {
           <p className="text-xs text-emerald-600 font-semibold">
             ✓ 100% Free · Up to 3000 Keywords per Search · {COUNTRIES.length}+ Countries
           </p>
-          <button
-            onClick={handleAnalyze}
-            disabled={loading || !input.trim()}
-            className="flex items-center justify-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-[#0a192f] via-[#11244e] to-[#1e3a8a] hover:from-[#060e1d] hover:to-[#0f2347] disabled:opacity-50 text-white font-semibold rounded-xl transition-all shadow-md shadow-[#0a192f]/20"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin text-[#38bdf8]" /> : <Search className="w-4 h-4 text-[#38bdf8]" />}
-            <span>{loading ? 'Analyzing...' : 'Analyze Keywords'}</span>
-          </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleClear}
+              disabled={isClearDisabled}
+              className="flex items-center justify-center space-x-1.5 px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white text-slate-700 font-semibold rounded-xl text-sm transition-all shadow-xs"
+            >
+              <X className="w-4 h-4 text-slate-500" />
+              <span>Clear</span>
+            </button>
+            <button
+              onClick={handleAnalyze}
+              disabled={loading || !input.trim()}
+              className="flex items-center justify-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-[#0a192f] via-[#11244e] to-[#1e3a8a] hover:from-[#060e1d] hover:to-[#0f2347] disabled:opacity-50 text-white font-semibold rounded-xl transition-all shadow-md shadow-[#0a192f]/20 whitespace-nowrap"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin text-[#38bdf8]" /> : <Search className="w-4 h-4 text-[#38bdf8]" />}
+              <span>{loading ? 'Analyzing...' : 'Analyze Keywords'}</span>
+            </button>
+          </div>
         </div>
         
         {error && (
