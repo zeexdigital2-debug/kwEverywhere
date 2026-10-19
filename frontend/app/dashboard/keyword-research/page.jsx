@@ -127,7 +127,7 @@ export default function KeywordResearchPage() {
         if (vol <= 0 || !val || val.length === 0 || val.every(v => v === 0)) {
           return <span className="text-slate-400 font-medium">—</span>;
         }
-        return <SparklineChart data={val} trend={row.trend} />;
+        return <SparklineChart data={val} monthlyVolumes={row.monthlyVolumes} trend={row.trend} />;
       } 
     }
   ];

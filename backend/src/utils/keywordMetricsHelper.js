@@ -2,6 +2,59 @@
  * Shared metrics calculation helpers for Keyword Research & Keywords Finder
  */
 
+const MONTH_MAP = {
+  1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'May', 6: 'Jun',
+  7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec',
+  JANUARY: 'Jan', FEBRUARY: 'Feb', MARCH: 'Mar', APRIL: 'Apr',
+  MAY: 'May', JUNE: 'Jun', JULY: 'Jul', AUGUST: 'Aug',
+  SEPTEMBER: 'Sep', OCTOBER: 'Oct', NOVEMBER: 'Nov', DECEMBER: 'Dec',
+  JAN: 'Jan', FEB: 'Feb', MAR: 'Mar', APR: 'Apr', JUN: 'Jun',
+  JUL: 'Jul', AUG: 'Aug', SEP: 'Sep', OCT: 'Oct', NOV: 'Nov', DEC: 'Dec'
+};
+
+const MONTH_NUM = {
+  JANUARY: 1, FEBRUARY: 2, MARCH: 3, APRIL: 4, MAY: 5, JUNE: 6,
+  JULY: 7, AUGUST: 8, SEPTEMBER: 9, OCTOBER: 10, NOVEMBER: 11, DECEMBER: 12,
+  JAN: 1, FEB: 2, MAR: 3, APR: 4, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12
+};
+
+function parseMonth(month) {
+  if (typeof month === 'number') return { num: month, name: MONTH_MAP[month] || 'Jan' };
+  const str = String(month || '').trim().toUpperCase();
+  const num = MONTH_NUM[str] || parseInt(str, 10) || 1;
+  const name = MONTH_MAP[str] || MONTH_MAP[num] || 'Jan';
+  return { num, name };
+}
+
+/**
+ * Format Google Ads monthlySearchVolumes into 12 chronological entries:
+ * [{ label: "Mar 2026", volume: 301000 }, ...]
+ */
+function formatMonthlyVolumes(rawVolumes) {
+  if (!Array.isArray(rawVolumes) || rawVolumes.length === 0) {
+    return [];
+  }
+
+  // Sort chronologically: oldest to newest
+  const sorted = [...rawVolumes].sort((a, b) => {
+    const yA = Number(a.year) || 0;
+    const yB = Number(b.year) || 0;
+    if (yA !== yB) return yA - yB;
+    const mA = parseMonth(a.month).num;
+    const mB = parseMonth(b.month).num;
+    return mA - mB;
+  });
+
+  return sorted.slice(-12).map((m) => {
+    const { name } = parseMonth(m.month);
+    const yearStr = m.year ? ` ${m.year}` : '';
+    return {
+      label: `${name}${yearStr}`,
+      volume: Number(m.monthlySearches ?? m.monthly_searches ?? 0)
+    };
+  });
+}
+
 /**
  * Calculate opportunity score (0-100) based on volume, competition, and keyword length.
  * If volume is 0 or null (no Google Ads data), returns 0.
@@ -47,5 +100,6 @@ function normalizeCompetition(rawComp) {
 module.exports = {
   calculateOpportunityScore,
   calculateTrendDirection,
-  normalizeCompetition
+  normalizeCompetition,
+  formatMonthlyVolumes
 };

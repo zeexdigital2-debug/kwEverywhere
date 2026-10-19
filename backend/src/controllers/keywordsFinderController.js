@@ -2,7 +2,8 @@ const { generateKeywordIdeas } = require('../services/googleAdsService');
 const {
   calculateOpportunityScore,
   calculateTrendDirection,
-  normalizeCompetition
+  normalizeCompetition,
+  formatMonthlyVolumes
 } = require('../utils/keywordMetricsHelper');
 
 const MULTI_KEYWORD_ERROR =
@@ -59,8 +60,14 @@ async function findKeywords(req, res) {
       const averageCpc = hasData && typeof item.averageCpc === 'number' ? item.averageCpc : cpc;
       const opportunity = hasData ? calculateOpportunityScore(kw, volume, competition) : 0;
 
-      const monthlyVolumes = Array.isArray(item.monthlySearchVolumes) ? item.monthlySearchVolumes : [];
-      let sparkline = hasData ? monthlyVolumes.map(m => Number(m.monthlySearches) || 0) : [];
+      const rawMonthlyVolumes = Array.isArray(item.monthlySearchVolumes) ? item.monthlySearchVolumes : [];
+      const formattedMonthlyVolumes = hasData ? formatMonthlyVolumes(rawMonthlyVolumes) : [];
+
+      let sparkline = hasData
+        ? (formattedMonthlyVolumes.length > 0
+            ? formattedMonthlyVolumes.map(m => m.volume)
+            : rawMonthlyVolumes.map(m => Number(m.monthlySearches) || 0))
+        : [];
       if (hasData && sparkline.length === 0) {
         sparkline = Array(12).fill(volume);
       }
@@ -75,10 +82,11 @@ async function findKeywords(req, res) {
         averageCpc,
         opportunity,
         sparkline,
+        monthlyVolumes: formattedMonthlyVolumes,
         trend,
         currency: 'USD',
         cpcRange: item.cpcRange || { low: cpc, high: cpc },
-        monthlySearchVolumes: monthlyVolumes
+        monthlySearchVolumes: rawMonthlyVolumes
       };
     });
 
