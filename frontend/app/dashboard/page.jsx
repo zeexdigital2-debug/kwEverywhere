@@ -1,6 +1,9 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Search, Lightbulb, Camera, ShieldOff, ArrowRight } from 'lucide-react';
+import ExtensionInstallModal from '@/components/ExtensionInstallModal';
+import { CHROME_STORE_URL } from '@/lib/extensionConfig';
 
 const tools = [
   { 
@@ -36,6 +39,17 @@ const tools = [
 ];
 
 export default function DashboardOverview() {
+  const [extensionModalOpen, setExtensionModalOpen] = useState(false);
+
+  const handleExtensionClick = (e) => {
+    if (e) e.preventDefault();
+    if (CHROME_STORE_URL && CHROME_STORE_URL.trim().length > 0) {
+      window.open(CHROME_STORE_URL, '_blank', 'noopener,noreferrer');
+    } else {
+      setExtensionModalOpen(true);
+    }
+  };
+
   return (
     <div className="space-y-7 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
@@ -139,7 +153,46 @@ export default function DashboardOverview() {
             </div>
           </Link>
         ))}
+
+        {/* Chrome Extension Card */}
+        <div
+          onClick={handleExtensionClick}
+          className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs hover:shadow-xl hover:border-[#38bdf8]/60 hover:-translate-y-1 transition-all duration-200 h-full flex flex-col justify-between cursor-pointer group"
+        >
+          <div>
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-11 h-11 rounded-xl bg-[#0a192f] flex items-center justify-center shadow-md">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" fill="#fff" />
+                  <path d="M12 2a10 10 0 0 1 8.66 5H12a5 5 0 0 0-4.33 2.5L3.34 7A10 10 0 0 1 12 2z" fill="#EA4335" />
+                  <path d="M3.34 7l4.33 2.5A5 5 0 0 0 7.67 14.5L3.34 17A10 10 0 0 1 3.34 7z" fill="#FBBC05" />
+                  <path d="M12 22a10 10 0 0 1-8.66-5l4.33-2.5A5 5 0 0 0 12 17h8.66A10 10 0 0 1 12 22z" fill="#34A853" />
+                  <circle cx="12" cy="12" r="4" fill="#4285F4" />
+                </svg>
+              </div>
+              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-sky-50 text-sky-600 border border-sky-200">
+                Browser Add-on
+              </span>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 group-hover:text-[#0a192f] transition-colors mb-1.5 flex items-center space-x-1.5">
+              <span>Chrome Extension</span>
+            </h3>
+            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed mb-4">
+              Overlay real-time search volume, CPC, and competition directly under Google searches.
+            </p>
+          </div>
+
+          <div className="flex items-center text-xs font-semibold text-sky-600 pt-3 border-t border-slate-100 group-hover:translate-x-1 transition-transform">
+            <span>Install Extension</span>
+            <ArrowRight className="w-3.5 h-3.5 ml-1" />
+          </div>
+        </div>
       </div>
+
+      <ExtensionInstallModal
+        isOpen={extensionModalOpen}
+        onClose={() => setExtensionModalOpen(false)}
+      />
     </div>
   );
 }

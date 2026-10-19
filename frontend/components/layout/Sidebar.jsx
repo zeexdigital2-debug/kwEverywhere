@@ -1,8 +1,11 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Search, Lightbulb, Camera, ShieldOff } from 'lucide-react';
+import { LayoutDashboard, Search, Lightbulb, Camera, ShieldOff, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
+import ExtensionInstallModal from '@/components/ExtensionInstallModal';
+import { CHROME_STORE_URL } from '@/lib/extensionConfig';
 
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
@@ -14,6 +17,16 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleExtensionClick = (e) => {
+    if (e) e.preventDefault();
+    if (CHROME_STORE_URL && CHROME_STORE_URL.trim().length > 0) {
+      window.open(CHROME_STORE_URL, '_blank', 'noopener,noreferrer');
+    } else {
+      setModalOpen(true);
+    }
+  };
 
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:top-[73px] md:bottom-0 bg-white border-r border-slate-200/80 shadow-xs z-30">
@@ -56,6 +69,30 @@ export function Sidebar() {
         </nav>
       </div>
 
+      {/* Chrome Extension Promo Card */}
+      <div className="p-3 mx-3 mb-2.5 bg-[#0b1528] rounded-xl border border-[#1a2b49] text-xs text-white shadow-sm">
+        <div className="flex items-center space-x-2 mb-1.5">
+          <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#fff" />
+            <path d="M12 2a10 10 0 0 1 8.66 5H12a5 5 0 0 0-4.33 2.5L3.34 7A10 10 0 0 1 12 2z" fill="#EA4335" />
+            <path d="M3.34 7l4.33 2.5A5 5 0 0 0 7.67 14.5L3.34 17A10 10 0 0 1 3.34 7z" fill="#FBBC05" />
+            <path d="M12 22a10 10 0 0 1-8.66-5l4.33-2.5A5 5 0 0 0 12 17h8.66A10 10 0 0 1 12 22z" fill="#34A853" />
+            <circle cx="12" cy="12" r="4" fill="#4285F4" />
+          </svg>
+          <span className="font-bold text-white text-[11px]">Chrome Extension</span>
+        </div>
+        <p className="text-[10px] text-slate-400 mb-2 leading-tight">
+          Get real-time Google search metrics inline.
+        </p>
+        <button
+          type="button"
+          onClick={handleExtensionClick}
+          className="w-full py-1.5 px-2 bg-[#112240] hover:bg-[#1a3660] text-sky-400 hover:text-white border border-[#203960] rounded-lg text-[11px] font-semibold transition-colors flex items-center justify-center space-x-1"
+        >
+          <span>Get Extension</span>
+        </button>
+      </div>
+
       {/* Free Plan Badge */}
       <div className="p-3 mx-3 mb-4 bg-gradient-to-r from-blue-50/70 to-indigo-50/50 rounded-xl border border-blue-100 text-xs">
         <div className="flex items-center justify-between mb-1">
@@ -68,6 +105,11 @@ export function Sidebar() {
           Free to use · No login required
         </p>
       </div>
+
+      <ExtensionInstallModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+      />
     </aside>
   );
 }

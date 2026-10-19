@@ -2,10 +2,22 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import ExtensionInstallModal from '@/components/ExtensionInstallModal';
+import { CHROME_STORE_URL } from '@/lib/extensionConfig';
 
 export default function ContactPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [extensionModalOpen, setExtensionModalOpen] = useState(false);
+
+  const handleExtensionClick = (e) => {
+    if (e) e.preventDefault();
+    if (CHROME_STORE_URL && CHROME_STORE_URL.trim().length > 0) {
+      window.open(CHROME_STORE_URL, '_blank', 'noopener,noreferrer');
+    } else {
+      setExtensionModalOpen(true);
+    }
+  };
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -105,8 +117,9 @@ export default function ContactPage() {
             >
               Sign in
             </Link>
-            <Link
-              href="/dashboard"
+            <button
+              type="button"
+              onClick={handleExtensionClick}
               className="px-4 py-2 text-sm font-medium text-white bg-[#0a192f] hover:bg-[#112240] rounded-lg shadow-sm hover:shadow-md transition-all flex items-center space-x-2"
             >
               <span className="flex items-center space-x-1">
@@ -119,7 +132,7 @@ export default function ContactPage() {
                 </svg>
               </span>
               <span>Get Extension</span>
-            </Link>
+            </button>
           </div>
 
           {/* Mobile Hamburger Button */}
@@ -164,12 +177,16 @@ export default function ContactPage() {
               >
                 Sign in
               </Link>
-              <Link
-                href="/signup"
+              <button
+                type="button"
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  handleExtensionClick(e);
+                }}
                 className="w-full text-center py-2 text-sm font-medium text-white bg-[#0a192f] hover:bg-[#112240] rounded-lg"
               >
                 Get Extension
-              </Link>
+              </button>
             </div>
           </div>
         )}
@@ -546,6 +563,11 @@ export default function ContactPage() {
           <p>© {new Date().getFullYear()} KWEveryWhere. Google Ads is a trademark of Google LLC. KWEveryWhere is not affiliated with or endorsed by Google.</p>
         </div>
       </footer>
+
+      <ExtensionInstallModal
+        isOpen={extensionModalOpen}
+        onClose={() => setExtensionModalOpen(false)}
+      />
 
     </div>
   );

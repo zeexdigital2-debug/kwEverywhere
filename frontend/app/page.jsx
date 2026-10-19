@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import ExtensionInstallModal from '@/components/ExtensionInstallModal';
+import { CHROME_STORE_URL } from '@/lib/extensionConfig';
 
 const SERP_DATA = [
   {
@@ -116,6 +118,16 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
+  const [extensionModalOpen, setExtensionModalOpen] = useState(false);
+
+  const handleExtensionClick = (e) => {
+    if (e) e.preventDefault();
+    if (CHROME_STORE_URL && CHROME_STORE_URL.trim().length > 0) {
+      window.open(CHROME_STORE_URL, '_blank', 'noopener,noreferrer');
+    } else {
+      setExtensionModalOpen(true);
+    }
+  };
 
   // Google typing simulation effect
   useEffect(() => {
@@ -241,8 +253,9 @@ export default function LandingPage() {
 
           {/* Action Buttons */}
           <div className="hidden md:flex items-center space-x-3">
-            <Link
-              href="/dashboard"
+            <button
+              type="button"
+              onClick={handleExtensionClick}
               className="px-4 py-2 text-sm font-medium text-white bg-[#0a192f] hover:bg-[#112240] rounded-lg shadow-sm hover:shadow-md transition-all flex items-center space-x-2"
             >
               <span className="flex items-center space-x-1">
@@ -256,7 +269,7 @@ export default function LandingPage() {
                 </svg>
               </span>
               <span>Get Extension</span>
-            </Link>
+            </button>
           </div>
 
           {/* Mobile Hamburger Button */}
@@ -295,12 +308,16 @@ export default function LandingPage() {
               Dashboard
             </Link>
             <div className="pt-2 flex flex-col gap-2">
-              <Link
-                href="/dashboard"
+              <button
+                type="button"
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  handleExtensionClick(e);
+                }}
                 className="w-full text-center py-2 text-sm font-medium text-white bg-[#0a192f] hover:bg-[#112240] rounded-lg"
               >
                 Get Extension
-              </Link>
+              </button>
             </div>
           </div>
         )}
@@ -1016,7 +1033,7 @@ export default function LandingPage() {
                   Live Search Overlay Directly Inside Google
                 </h3>
                 <p className="text-sm text-slate-300 leading-relaxed font-normal mb-6">
-                  Our lightweight browser extension injects rich keyword analytics, traffic valuation, and domain authority metrics directly beneath Google, YouTube, and Amazon search results without leaving your active tab.
+                  Our lightweight browser extension injects rich keyword analytics, traffic valuation, and domain authority metrics directly beneath Google search results without leaving your active tab.
                 </p>
 
                 {/* Micro-UI Preview Widget */}
@@ -1045,15 +1062,16 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <Link
-                href="/dashboard"
-                className="pt-4 border-t border-[#1a2b49] flex items-center justify-between text-xs font-semibold text-[#38bdf8] group-hover:text-white transition-colors"
+              <button
+                type="button"
+                onClick={handleExtensionClick}
+                className="pt-4 border-t border-[#1a2b49] w-full flex items-center justify-between text-xs font-semibold text-[#38bdf8] group-hover:text-white transition-colors text-left"
               >
                 <span>Install Chrome extension</span>
                 <svg className="w-4 h-4 ml-1.5 group-hover:translate-x-1.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
                 </svg>
-              </Link>
+              </button>
             </div>
 
 
@@ -1098,7 +1116,7 @@ export default function LandingPage() {
               },
               {
                 q: 'How does the browser extension work?',
-                a: 'Install the extension on Chrome or any Chromium browser. As you search on Google, live search volume, estimated CPC, competition index, and trend graphs appear neatly right below the search bar.'
+                a: 'Our browser extension displays real-time search volume, estimated CPC, and competition directly under Google searches. It uses the exact same verified data engine as our web platform. Simply click the "Get Extension" button to install it in seconds.'
               },
               {
                 q: 'Can I analyze keywords across international markets?',
@@ -1177,15 +1195,22 @@ export default function LandingPage() {
                   </svg>
                   <span>Launch Web Dashboard</span>
                 </Link>
-                <Link
-                  href="/dashboard"
+                <button
+                  type="button"
+                  onClick={handleExtensionClick}
                   className="inline-flex items-center space-x-2 px-8 py-3.5 bg-[#0a192f]/70 hover:bg-[#0a192f] text-white border border-[#2a436e] hover:border-[#38bdf8]/40 font-bold rounded-xl hover:-translate-y-0.5 transition-all duration-200 backdrop-blur-sm"
                 >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/>
-                  </svg>
+                  <span className="flex items-center space-x-1">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" fill="#fff" />
+                      <path d="M12 2a10 10 0 0 1 8.66 5H12a5 5 0 0 0-4.33 2.5L3.34 7A10 10 0 0 1 12 2z" fill="#EA4335" />
+                      <path d="M3.34 7l4.33 2.5A5 5 0 0 0 7.67 14.5L3.34 17A10 10 0 0 1 3.34 7z" fill="#FBBC05" />
+                      <path d="M12 22a10 10 0 0 1-8.66-5l4.33-2.5A5 5 0 0 0 12 17h8.66A10 10 0 0 1 12 22z" fill="#34A853" />
+                      <circle cx="12" cy="12" r="4" fill="#4285F4" />
+                    </svg>
+                  </span>
                   <span>Get Chrome Extension</span>
-                </Link>
+                </button>
               </div>
             </div>
           </div>
@@ -1249,6 +1274,12 @@ export default function LandingPage() {
           <p>© {new Date().getFullYear()} KWEveryWhere. Google Ads is a trademark of Google LLC. KWEveryWhere is not affiliated with or endorsed by Google.</p>
         </div>
       </footer>
+
+      {/* Extension Install Modal */}
+      <ExtensionInstallModal
+        isOpen={extensionModalOpen}
+        onClose={() => setExtensionModalOpen(false)}
+      />
 
     </div>
   );
