@@ -17,5 +17,11 @@ module.exports = {
   GOOGLE_ADS_CLIENT_SECRET: process.env.GOOGLE_ADS_CLIENT_SECRET || '',
   GOOGLE_ADS_REFRESH_TOKEN: process.env.GOOGLE_ADS_REFRESH_TOKEN || '',
   GOOGLE_ADS_CUSTOMER_ID: (process.env.GOOGLE_ADS_CUSTOMER_ID || '7500158188').replace(/[^0-9]/g, ''),
-  USD_PKR_RATE: Number(process.env.USD_PKR_RATE) || 280
+  USD_PKR_RATE: Number(process.env.USD_PKR_RATE) || 280,
+  UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL || '',
+  UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+  KV_REST_API_URL: process.env.KV_REST_API_URL || '',
+  KV_REST_API_TOKEN: process.env.KV_REST_API_TOKEN || '',
+  WEB_DAILY_CALL_CAP: Number(process.env.WEB_DAILY_CALL_CAP) || 4000,
+  EXT_DAILY_CALL_CAP: Number(process.env.EXT_DAILY_CALL_CAP) || 4000
 };

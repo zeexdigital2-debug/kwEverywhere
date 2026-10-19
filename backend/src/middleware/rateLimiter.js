@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
+  skip: (req) => req.baseUrl?.startsWith('/api/extension') || req.originalUrl?.includes('/api/extension'),
   standardHeaders: true,
   legacyHeaders: false,
   message: { status: 429, error: 'Too many requests. Please try again after 15 minutes.' }

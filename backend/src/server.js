@@ -22,6 +22,7 @@ const adminAuthRoutes = require('./routes/adminAuthRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const contentRoutes = require('./routes/contentRoutes');
 const googleAdsRoutes = require('./routes/googleAdsRoutes');
+const extensionRoutes = require('./routes/extensionRoutes');
 
 const app = express();
 
@@ -81,6 +82,9 @@ app.use('/api/domain-metrics', authMiddleware, domainMetricsRoutes);
 // Google Ads API Keyword Ideas Route
 app.use('/api/keywords', googleAdsRoutes);
 app.use('/api/keyword', googleAdsRoutes);
+
+// Extension Routes (metrics & monitoring status)
+app.use('/api/extension', extensionRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

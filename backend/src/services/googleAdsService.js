@@ -1,9 +1,11 @@
 const axios = require('axios');
 const env = require('../config/env');
+const store = require('./store');
 
-// In-memory 24-hour cache: key -> { data, expiresAt }
-const keywordCache = new Map();
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+// Cache TTL Constants (in seconds)
+const KW_METRICS_CACHE_TTL = 7 * 24 * 60 * 60; // 7 days (604,800s)
+const IDEAS_CACHE_TTL = 3 * 24 * 60 * 60;       // 3 days (259,200s)
+const DAILY_CALL_COUNTER_TTL = 2 * 24 * 60 * 60; // 2 days (172,800s)
 
 // Exchange rate cache for USD/PKR
 let fxCache = {
@@ -17,23 +19,43 @@ const FX_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 let cachedAccessToken = null;
 let accessTokenExpiresAt = 0;
 
-// Global daily Google Ads API call tracking (Cap: 8,000 calls / day)
-const GLOBAL_DAILY_CALL_LIMIT = 8000;
-let globalApiStats = {
-  dateStr: new Date().toISOString().slice(0, 10), // "YYYY-MM-DD"
-  callCount: 0
-};
+/**
+ * Format current UTC date as YYYYMMDD
+ */
+function getUtcDateStr() {
+  const d = new Date();
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  return `${yyyy}${mm}${dd}`;
+}
 
 /**
- * Check and enforce global daily Google Ads API call cap.
- * Throws a 429 error if limit would be exceeded.
+ * Get daily call key for a source ('web' or 'ext')
  */
-function checkGlobalDailyCap(callsNeeded = 1) {
-  const todayStr = new Date().toISOString().slice(0, 10);
-  if (globalApiStats.dateStr !== todayStr) {
-    globalApiStats = { dateStr: todayStr, callCount: 0 };
-  }
-  if (globalApiStats.callCount + callsNeeded > GLOBAL_DAILY_CALL_LIMIT) {
+function getDailyCallKey(source = 'web') {
+  const s = source === 'ext' ? 'ext' : 'web';
+  return `calls:${s}:${getUtcDateStr()}`;
+}
+
+/**
+ * Get configured daily call cap from env
+ */
+function getDailyCap(source = 'web') {
+  return source === 'ext'
+    ? (Number(env.EXT_DAILY_CALL_CAP) || 4000)
+    : (Number(env.WEB_DAILY_CALL_CAP) || 4000);
+}
+
+/**
+ * Check if the daily budget for the specified source has room.
+ * Throws 429 if limit reached or would be exceeded.
+ */
+async function checkDailyCap(source = 'web', callsNeeded = 1) {
+  const key = getDailyCallKey(source);
+  const cap = getDailyCap(source);
+  const currentCount = Number(await store.get(key)) || 0;
+  if (currentCount + callsNeeded > cap) {
     const err = new Error('Daily limit reached, try again tomorrow');
     err.isDailyLimit = true;
     err.statusCode = 429;
@@ -42,25 +64,34 @@ function checkGlobalDailyCap(callsNeeded = 1) {
 }
 
 /**
- * Record actual Google Ads API calls made.
+ * Record actual Google Ads API HTTP calls made.
  */
-function recordGlobalApiCalls(callsMade = 1) {
-  const todayStr = new Date().toISOString().slice(0, 10);
-  if (globalApiStats.dateStr !== todayStr) {
-    globalApiStats = { dateStr: todayStr, callCount: 0 };
-  }
-  globalApiStats.callCount += callsMade;
+async function recordDailyApiCalls(source = 'web', callsMade = 1) {
+  const key = getDailyCallKey(source);
+  return await store.incr(key, DAILY_CALL_COUNTER_TTL, callsMade);
 }
 
 /**
- * Get current global API call stats for monitoring.
+ * Get current daily API call stats for monitoring/status.
  */
-function getGlobalApiCallStats() {
-  const todayStr = new Date().toISOString().slice(0, 10);
-  if (globalApiStats.dateStr !== todayStr) {
-    globalApiStats = { dateStr: todayStr, callCount: 0 };
-  }
-  return { ...globalApiStats, limit: GLOBAL_DAILY_CALL_LIMIT };
+async function getDailyCallStats() {
+  const dateStr = getUtcDateStr();
+  const webKey = `calls:web:${dateStr}`;
+  const extKey = `calls:ext:${dateStr}`;
+
+  const [webCalls, extCalls] = await store.mget([webKey, extKey]);
+
+  return {
+    date: dateStr,
+    web: {
+      calls: Number(webCalls) || 0,
+      cap: Number(env.WEB_DAILY_CALL_CAP) || 4000
+    },
+    ext: {
+      calls: Number(extCalls) || 0,
+      cap: Number(env.EXT_DAILY_CALL_CAP) || 4000
+    }
+  };
 }
 
 /**
@@ -251,22 +282,41 @@ function parseMetricsItem(item, usdPerPkr) {
       high: highCpc
     },
     currency: 'USD',
-    monthlySearchVolumes
+    monthlySearchVolumes,
+    monthlyVolumes: monthlySearchVolumes
   };
 }
 
 /**
- * (A) Keyword Research: Google Ads generateKeywordHistoricalMetrics
- * - Exact keywords metrics only (no related ideas/variations)
- * - 1 to 3000 keywords in a single call (chunks if > 10,000)
- * - 24-hour in-memory cache per keyword + country + language
+ * Create a clean zero-data metric fallback object
+ */
+function createZeroMetric(kw) {
+  return {
+    text: kw,
+    avgMonthlySearches: 0,
+    competition: 'UNSPECIFIED',
+    cpc: 0,
+    averageCpc: 0,
+    cpcRange: { low: 0, high: 0 },
+    currency: 'USD',
+    monthlySearchVolumes: [],
+    monthlyVolumes: []
+  };
+}
+
+/**
+ * (A) Keyword Historical Metrics
+ * - Exact keywords metrics (no related ideas/variations)
+ * - Persistent cache via store.js: kw:v1:{COUNTRY}:{LANG}:{keyword lowercase trimmed}, TTL 7 days (604,800s)
  * - ONLY cache-miss keywords are sent to Google Ads API
- * - Global daily limit: 8,000 API calls (cache-miss only)
+ * - Separate daily call cap for web vs ext (calls:web:{YYYYMMDD} vs calls:ext:{YYYYMMDD})
+ * - If 100% cache hits, Google call is 0 and daily call budget is untouched
  *
- * @param {string|string[]} keywordInput One or more keywords (up to 3000)
+ * @param {string|string[]} keywordInput One or more keywords
  * @param {Object} [options]
  * @param {string} [options.country='US'] Country code (US, PK, GB, etc.) or geo numeric ID
  * @param {string} [options.language='languageConstants/1000'] Language constant
+ * @param {string} [options.source='web'] Calling source: 'web' | 'ext'
  * @returns {Promise<Array>} List of exact-match keyword metrics
  */
 async function generateKeywordHistoricalMetrics(keywordInput, options = {}) {
@@ -284,49 +334,46 @@ async function generateKeywordHistoricalMetrics(keywordInput, options = {}) {
     throw new Error('A valid keyword string or array of keywords is required.');
   }
 
-  const geoId = resolveGeoTargetId(options.country || options.geoId || 'US');
-  const language = options.language || 'languageConstants/1000';
-  const now = Date.now();
+  const countryCode = String(options.country || options.geoId || 'US').trim().toUpperCase();
+  const geoId = resolveGeoTargetId(countryCode);
+  const rawLanguage = options.language || 'languageConstants/1000';
+  const langCode = String(options.lang || rawLanguage).replace(/^languageConstants\//, '').trim() || '1000';
+  const source = options.source === 'ext' ? 'ext' : 'web';
 
-  // 1. Check 24-hour cache for each individual keyword
+  // 1. Check persistent cache in store.js for all keywords using mget
+  const cacheKeys = keywordsList.map(kw => `kw:v1:${countryCode}:${langCode}:${kw.toLowerCase().trim()}`);
+  const cachedItems = await store.mget(cacheKeys);
+
   const resultsMap = new Map();
   const cacheMisses = [];
 
-  for (const kw of keywordsList) {
-    const cacheKey = `hist:${kw.toLowerCase()}::${geoId}::${language}`;
-    const cached = keywordCache.get(cacheKey);
-    if (cached && now < cached.expiresAt) {
-      resultsMap.set(kw.toLowerCase(), cached.data);
+  for (let i = 0; i < keywordsList.length; i++) {
+    const kw = keywordsList[i];
+    const lowerKw = kw.toLowerCase().trim();
+    const cached = cachedItems[i];
+
+    if (cached) {
+      resultsMap.set(lowerKw, cached);
     } else {
       cacheMisses.push(kw);
     }
   }
 
   // 2. If all keywords were cached (100% cache hit), return immediately
-  // Cache hits do NOT count against the global daily API call limit
+  // Cache hits do NOT count against the daily call cap
   if (cacheMisses.length === 0) {
-    return keywordsList.map(kw => resultsMap.get(kw.toLowerCase()) || {
-      text: kw,
-      avgMonthlySearches: 0,
-      competition: 'UNSPECIFIED',
-      cpc: 0,
-      averageCpc: 0,
-      cpcRange: { low: 0, high: 0 },
-      currency: 'USD',
-      monthlySearchVolumes: []
-    });
+    return keywordsList.map(kw => resultsMap.get(kw.toLowerCase().trim()) || createZeroMetric(kw));
   }
 
   // 3. For cache misses, chunk in groups of 10,000 (Google Ads API limit)
-  // For 1 to 3000 keywords, this is a single chunk / single call
   const CHUNK_SIZE = 10000;
   const chunks = [];
   for (let i = 0; i < cacheMisses.length; i += CHUNK_SIZE) {
     chunks.push(cacheMisses.slice(i, i + CHUNK_SIZE));
   }
 
-  // Check global daily cap before making external Google API calls
-  checkGlobalDailyCap(chunks.length);
+  // Check daily call cap for this source before making external Google API calls
+  await checkDailyCap(source, chunks.length);
 
   // Obtain access token & exchange rate
   const [accessToken, usdPerPkr] = await Promise.all([
@@ -345,7 +392,7 @@ async function generateKeywordHistoricalMetrics(keywordInput, options = {}) {
     const requestBody = {
       keywords: chunk,
       geoTargetConstants: [`geoTargetConstants/${geoId}`],
-      language,
+      language: rawLanguage,
       keywordPlanNetwork: 'GOOGLE_SEARCH'
     };
 
@@ -355,16 +402,15 @@ async function generateKeywordHistoricalMetrics(keywordInput, options = {}) {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         },
-        timeout: 55000 // 55s timeout, well within Vercel's 60s maxDuration
+        timeout: 55000 // 55s timeout
       });
 
-      // Increment global API call counter
-      recordGlobalApiCalls(1);
+      // Increment daily call counter for this source
+      await recordDailyApiCalls(source, 1);
 
       const items = response.data?.results || [];
-
-      // Keep track of which keywords in this chunk had metrics returned
       const returnedSet = new Set();
+      const entriesToCache = [];
 
       for (const item of items) {
         const parsed = parseMetricsItem(item, usdPerPkr);
@@ -372,11 +418,9 @@ async function generateKeywordHistoricalMetrics(keywordInput, options = {}) {
         if (lowerText) {
           returnedSet.add(lowerText);
           resultsMap.set(lowerText, parsed);
-
-          // Cache individual keyword data for 24 hours
-          keywordCache.set(`hist:${lowerText}::${geoId}::${language}`, {
-            data: parsed,
-            expiresAt: now + CACHE_TTL_MS
+          entriesToCache.push({
+            key: `kw:v1:${countryCode}:${langCode}:${lowerText}`,
+            value: parsed
           });
         }
       }
@@ -385,22 +429,18 @@ async function generateKeywordHistoricalMetrics(keywordInput, options = {}) {
       for (const kw of chunk) {
         const lowerKw = kw.toLowerCase().trim();
         if (!returnedSet.has(lowerKw)) {
-          const zeroMetric = {
-            text: kw,
-            avgMonthlySearches: 0,
-            competition: 'UNSPECIFIED',
-            cpc: 0,
-            averageCpc: 0,
-            cpcRange: { low: 0, high: 0 },
-            currency: 'USD',
-            monthlySearchVolumes: []
-          };
+          const zeroMetric = createZeroMetric(kw);
           resultsMap.set(lowerKw, zeroMetric);
-          keywordCache.set(`hist:${lowerKw}::${geoId}::${language}`, {
-            data: zeroMetric,
-            expiresAt: now + CACHE_TTL_MS
+          entriesToCache.push({
+            key: `kw:v1:${countryCode}:${langCode}:${lowerKw}`,
+            value: zeroMetric
           });
         }
+      }
+
+      // Batch persist new cache entries with TTL 7 days (604,800s) via single pipeline
+      if (entriesToCache.length > 0) {
+        await store.mset(entriesToCache, KW_METRICS_CACHE_TTL);
       }
     } catch (err) {
       const status = err.response?.status;
@@ -411,29 +451,21 @@ async function generateKeywordHistoricalMetrics(keywordInput, options = {}) {
   }
 
   // Return formatted results in the exact order requested by user
-  return keywordsList.map(kw => resultsMap.get(kw.toLowerCase().trim()) || {
-    text: kw,
-    avgMonthlySearches: 0,
-    competition: 'UNSPECIFIED',
-    cpc: 0,
-    averageCpc: 0,
-    cpcRange: { low: 0, high: 0 },
-    currency: 'USD',
-    monthlySearchVolumes: []
-  });
+  return keywordsList.map(kw => resultsMap.get(kw.toLowerCase().trim()) || createZeroMetric(kw));
 }
 
 /**
  * (B) Keywords Finder: Google Ads generateKeywordIdeas
- * - Single seed keyword to discover related ideas and close variants
- * - Volume descending sort, default 200 results
- * - 24-hour cache per seed keyword + country + language
- * - Global daily limit: 8,000 API calls (cache-miss only)
+ * - Single seed keyword to discover related ideas
+ * - Persistent cache via store.js: ideas:v1:{COUNTRY}:{LANG}:{seed}, TTL 3 days (259,200s)
+ * - Website and extension share the same cache
+ * - Uses web daily call budget
  *
  * @param {string} seedKeyword A single seed keyword
  * @param {Object} [options]
  * @param {string} [options.country='US'] Country code or geo numeric ID
  * @param {string} [options.language='languageConstants/1000'] Language constant
+ * @param {string} [options.source='web'] Calling source: 'web' | 'ext'
  * @param {number} [options.limit=200] Results limit (default 200)
  * @returns {Promise<Array>} List of related keyword ideas sorted by volume descending
  */
@@ -449,19 +481,21 @@ async function generateKeywordIdeas(seedKeyword, options = {}) {
   }
 
   const limit = Math.min(200, Math.max(1, Number(options.limit) || 200));
-  const geoId = resolveGeoTargetId(options.country || options.geoId || 'US');
-  const language = options.language || 'languageConstants/1000';
-  const now = Date.now();
+  const countryCode = String(options.country || options.geoId || 'US').trim().toUpperCase();
+  const geoId = resolveGeoTargetId(countryCode);
+  const rawLanguage = options.language || 'languageConstants/1000';
+  const langCode = String(options.lang || rawLanguage).replace(/^languageConstants\//, '').trim() || '1000';
+  const source = options.source === 'ext' ? 'ext' : 'web';
 
-  // 1. Check 24-hour cache
-  const cacheKey = `ideas:${seed.toLowerCase()}::${geoId}::${language}`;
-  const cached = keywordCache.get(cacheKey);
-  if (cached && now < cached.expiresAt) {
-    return cached.data.slice(0, limit);
+  // 1. Check persistent cache: ideas:v1:{COUNTRY}:{LANG}:{seed} (TTL 3 days)
+  const cacheKey = `ideas:v1:${countryCode}:${langCode}:${seed.toLowerCase()}`;
+  const cached = await store.get(cacheKey);
+  if (cached && Array.isArray(cached)) {
+    return cached.slice(0, limit);
   }
 
-  // 2. Check global daily cap before calling Google Ads API
-  checkGlobalDailyCap(1);
+  // 2. Check daily call cap for this source before calling Google Ads API
+  await checkDailyCap(source, 1);
 
   // 3. Obtain access token & exchange rate concurrently
   const [accessToken, usdPerPkr] = await Promise.all([
@@ -481,7 +515,7 @@ async function generateKeywordIdeas(seedKeyword, options = {}) {
       keywords: [seed]
     },
     geoTargetConstants: [`geoTargetConstants/${geoId}`],
-    language,
+    language: rawLanguage,
     keywordPlanNetwork: 'GOOGLE_SEARCH'
   };
 
@@ -494,8 +528,8 @@ async function generateKeywordIdeas(seedKeyword, options = {}) {
       timeout: 55000
     });
 
-    // Increment global API call counter
-    recordGlobalApiCalls(1);
+    // Increment daily call counter for this source
+    await recordDailyApiCalls(source, 1);
 
     const rawResults = response.data?.results || [];
 
@@ -515,11 +549,8 @@ async function generateKeywordIdeas(seedKeyword, options = {}) {
     // Sort descending by avgMonthlySearches
     formatted.sort((a, b) => b.avgMonthlySearches - a.avgMonthlySearches);
 
-    // Cache full result array for 24 hours
-    keywordCache.set(cacheKey, {
-      data: formatted,
-      expiresAt: now + CACHE_TTL_MS
-    });
+    // Cache full result array in store for 3 days (259,200s)
+    await store.set(cacheKey, formatted, IDEAS_CACHE_TTL);
 
     return formatted.slice(0, limit);
   } catch (err) {
@@ -537,7 +568,11 @@ module.exports = {
   generateKeywordIdeas,
   resolveGeoTargetId,
   GEO_TARGET_LOOKUP,
-  checkGlobalDailyCap,
-  recordGlobalApiCalls,
-  getGlobalApiCallStats
+  checkDailyCap,
+  recordDailyApiCalls,
+  getDailyCallStats,
+  // Backwards-compatible aliases
+  checkGlobalDailyCap: (callsNeeded = 1) => checkDailyCap('web', callsNeeded),
+  recordGlobalApiCalls: (callsMade = 1) => recordDailyApiCalls('web', callsMade),
+  getGlobalApiCallStats: getDailyCallStats
 };
